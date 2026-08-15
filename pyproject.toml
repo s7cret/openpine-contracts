@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openpine-contracts"
+version = "0.1.0"
+description = "Canonical OpenPine 5.0 contracts: schemas, hashing, compatibility"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "OpenPine"}]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/s7cret/openpine-contracts"
+Repository = "https://github.com/s7cret/openpine-contracts"
+
+[tool.setuptools.packages.find]
+include = ["openpine_contracts*"]
+
+[tool.setuptools.package-data]
+openpine_contracts = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

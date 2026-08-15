@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.marketdata.bar.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "instrument_id",
+    "timeframe",
+    "open_time_utc_ms",
+    "close_time_utc_ms",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "finality",
+    "revision_state",
+    "revision",
+    "provider",
+    "snapshot_id"
+  ],
+  "properties": {
+    "schema_id": {"const": "openpine.marketdata.bar.v2"},
+    "instrument_id": {"type": "string", "minLength": 1},
+    "timeframe": {"type": "string", "minLength": 1},
+    "open_time_utc_ms": {"type": "integer"},
+    "close_time_utc_ms": {"type": "integer"},
+    "open": {"type": "string"},
+    "high": {"type": "string"},
+    "low": {"type": "string"},
+    "close": {"type": "string"},
+    "volume": {"type": "string"},
+    "finality": {"enum": ["OPEN", "FINAL"]},
+    "revision_state": {"enum": ["ORIGINAL", "CORRECTED", "REVOKED"]},
+    "revision": {"type": "integer", "minimum": 0},
+    "provider": {"type": "string"},
+    "snapshot_id": {"type": "string"}
+  }
+}
