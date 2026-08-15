@@ -2,6 +2,7 @@
 
 from .hashing import canonical_dumps, content_hash
 from .compatibility import admit
+from .money import MoneyError, decimal_string
 from .models import (
     Finality,
     RevisionState,
@@ -17,6 +18,8 @@ __all__ = [
     "SemanticProfile",
     "WarmupMode",
     "admit",
+    "MoneyError",
+    "decimal_string",
     "canonical_dumps",
     "content_hash",
     "__version__",
