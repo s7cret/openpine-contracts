@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openpine-contracts"
-version = "0.1.0"
-description = "Canonical OpenPine 5.0 contracts: schemas, hashing, compatibility"
+version = "1.0.0rc1"
+description = "Canonical OpenPine contracts: schemas, hashing, compatibility"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -13,7 +13,14 @@ authors = [{name = "OpenPine"}]
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+validation = ["jsonschema>=4.20"]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "build>=1.2",
+  "jsonschema>=4.20",
+]
 
 [project.urls]
 Homepage = "https://github.com/s7cret/openpine-contracts"
@@ -23,8 +30,21 @@ Repository = "https://github.com/s7cret/openpine-contracts"
 include = ["openpine_contracts*"]
 
 [tool.setuptools.package-data]
-openpine_contracts = ["py.typed"]
+openpine_contracts = ["py.typed", "schemas/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["openpine_contracts"]
+ignore_missing_imports = true

@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.marketdata.bar.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "series_id",
+    "instrument_id",
+    "timeframe",
+    "open_time_utc_ms",
+    "close_time_utc_ms",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "finality",
+    "revision_state",
+    "revision",
+    "provider",
+    "snapshot_id",
+    "bar_content_hash"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.marketdata.bar.v2"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "series_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeframe": {
+      "type": "string",
+      "minLength": 1
+    },
+    "open_time_utc_ms": {
+      "type": "integer"
+    },
+    "close_time_utc_ms": {
+      "type": "integer"
+    },
+    "open": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "high": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "low": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "close": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "volume": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "volume_scale": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "finality": {
+      "enum": [
+        "OPEN",
+        "FINAL"
+      ]
+    },
+    "revision_state": {
+      "enum": [
+        "ORIGINAL",
+        "CORRECTED",
+        "REVOKED"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "observed_at_utc_ms": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "ingested_at_utc_ms": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "session_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "bar_content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "superseded_bar_hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1,4 +1,5 @@
-from openpine_contracts.compatibility import AdmitError, AdmitPolicy, AdmitRequest, admit
+from openpine_contracts import AdmitError, AdmitPolicy, AdmitRequest, admit, evaluate_admit
+from openpine_contracts.compatibility import CODE_MAJOR, CODE_OK, CODE_STACK
 
 
 def _ok() -> tuple[AdmitRequest, AdmitPolicy]:
@@ -25,7 +26,9 @@ def _ok() -> tuple[AdmitRequest, AdmitPolicy]:
 
 def test_admit_ok() -> None:
     req, policy = _ok()
-    admit(req, policy)
+    result = admit(req, policy)
+    assert result.admitted is True
+    assert result.code == CODE_OK
 
 
 def test_stack_drift_fail_closed() -> None:
@@ -38,9 +41,28 @@ def test_stack_drift_fail_closed() -> None:
         stack_id="other",
         artifact_hash=req.artifact_hash,
     )
+    result = evaluate_admit(req, policy)
+    assert result.admitted is False
+    assert result.code == CODE_STACK
     try:
         admit(req, policy)
     except AdmitError as exc:
+        assert exc.code == CODE_STACK
         assert "stack_id" in str(exc)
     else:
         raise AssertionError("expected AdmitError")
+
+
+def test_unsupported_major_has_stable_code() -> None:
+    req, policy = _ok()
+    req = AdmitRequest(
+        schema_id=req.schema_id,
+        schema_major=3,
+        schema_minor=0,
+        required_capabilities=req.required_capabilities,
+        stack_id=req.stack_id,
+        artifact_hash=req.artifact_hash,
+    )
+    result = evaluate_admit(req, policy)
+    assert result.code == CODE_MAJOR
+    assert result.to_dict()["admitted"] is False

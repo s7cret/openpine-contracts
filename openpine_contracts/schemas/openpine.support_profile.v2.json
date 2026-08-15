@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.support_profile.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "features"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.support_profile.v2"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FeatureSupport"
+      }
+    }
+  },
+  "$defs": {
+    "FeatureSupport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature_id",
+        "parse",
+        "bind_type",
+        "lower",
+        "runtime",
+        "data_mtf",
+        "simulation",
+        "live_safe",
+        "visual",
+        "numeric_parity"
+      ],
+      "properties": {
+        "feature_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parse": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "bind_type": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "lower": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "runtime": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "data_mtf": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "simulation": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "live_safe": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "visual": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "numeric_parity": {
+          "enum": [
+            "SUPPORTED",
+            "CONDITIONAL",
+            "VISUAL_ONLY",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "capability_predicate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limitation_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fixture_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

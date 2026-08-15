@@ -1,0 +1,78 @@
+{
+  "ok": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 2,
+      "schema_minor": 0,
+      "required_capabilities": ["closed_bar"],
+      "stack_id": "stack-1",
+      "artifact_hash": "sha256:aaa"
+    },
+    "policy": {
+      "supported_schema_id": "openpine.run.v2",
+      "min_major": 2,
+      "max_major": 2,
+      "min_minor": 0,
+      "max_minor": 5,
+      "capabilities": ["closed_bar", "mtf"],
+      "expected_stack_id": "stack-1",
+      "expected_artifact_hash": "sha256:aaa"
+    },
+    "expected_code": "ADMIT_OK"
+  },
+  "unsupported_major": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 3,
+      "schema_minor": 0,
+      "required_capabilities": ["closed_bar"],
+      "stack_id": "stack-1",
+      "artifact_hash": "sha256:aaa"
+    },
+    "expected_code": "SCHEMA_MAJOR_UNSUPPORTED"
+  },
+  "unsupported_minor": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 2,
+      "schema_minor": 9,
+      "required_capabilities": ["closed_bar"],
+      "stack_id": "stack-1",
+      "artifact_hash": "sha256:aaa"
+    },
+    "expected_code": "SCHEMA_MINOR_TOO_NEW"
+  },
+  "missing_capability": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 2,
+      "schema_minor": 0,
+      "required_capabilities": ["isolated_worker"],
+      "stack_id": "stack-1",
+      "artifact_hash": "sha256:aaa"
+    },
+    "expected_code": "MISSING_CAPABILITIES"
+  },
+  "stack_drift": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 2,
+      "schema_minor": 0,
+      "required_capabilities": ["closed_bar"],
+      "stack_id": "other",
+      "artifact_hash": "sha256:aaa"
+    },
+    "expected_code": "STACK_ID_DRIFT"
+  },
+  "hash_mismatch": {
+    "request": {
+      "schema_id": "openpine.run.v2",
+      "schema_major": 2,
+      "schema_minor": 0,
+      "required_capabilities": ["closed_bar"],
+      "stack_id": "stack-1",
+      "artifact_hash": "sha256:bbb"
+    },
+    "expected_code": "ARTIFACT_HASH_MISMATCH"
+  }
+}

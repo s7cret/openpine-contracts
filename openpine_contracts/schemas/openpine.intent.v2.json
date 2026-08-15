@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.intent.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "kind",
+    "run_id",
+    "strategy_id",
+    "bar_index",
+    "phase",
+    "idempotency_key"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.intent.v2"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "kind": {
+      "enum": [
+        "entry",
+        "order",
+        "exit",
+        "close",
+        "cancel",
+        "cancel_all",
+        "risk"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bar_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_open_time_utc_ms": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_span": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "semantic_profile": {
+      "enum": [
+        "legacy_4x",
+        "strict_5x"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin_command_kind": {
+      "type": "string"
+    },
+    "qty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "price": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stop": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "limit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "from_entry": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "oca_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "oca_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "comment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

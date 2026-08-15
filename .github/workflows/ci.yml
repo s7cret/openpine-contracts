@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Format
+        run: ruff format --check .
+      - name: Lint
+        run: ruff check .
+      - name: Typecheck
+        run: mypy
+      - name: Tests
+        run: pytest -q
+      - name: Wheel smoke
+        run: |
+          python -m build
+          python -m venv /tmp/op-contracts-smoke
+          /tmp/op-contracts-smoke/bin/pip install dist/*.whl
+          /tmp/op-contracts-smoke/bin/python - <<'PY'
+          import importlib.resources
+          import openpine_contracts
+          from openpine_contracts import get_schema, list_schema_ids, schema_bytes
+          assert openpine_contracts.__version__ == "1.0.0rc1"
+          ids = list_schema_ids()
+          assert "openpine.marketdata.v2" in ids
+          assert "py.typed" in importlib.resources.files("openpine_contracts").iterdir().__class__.__name__ or True
+          typed = importlib.resources.files("openpine_contracts").joinpath("py.typed")
+          assert typed.is_file()
+          for schema_id in ids:
+              raw = schema_bytes(schema_id)
+              assert raw
+              schema = get_schema(schema_id)
+              assert schema["$id"] == schema_id
+          print("wheel-smoke-ok", len(ids))
+          PY

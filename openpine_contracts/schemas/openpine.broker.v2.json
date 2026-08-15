@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.broker.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "kind",
+    "body"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.broker.v2"
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "kind": {
+      "enum": [
+        "command",
+        "event",
+        "order_projection",
+        "position_projection",
+        "account_snapshot",
+        "reconciliation_report"
+      ]
+    },
+    "body": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "BrokerCommand": {
+      "type": "object",
+      "required": [
+        "command_id",
+        "command_kind",
+        "idempotency_key"
+      ],
+      "properties": {
+        "command_id": {
+          "type": "string"
+        },
+        "command_kind": {
+          "type": "string"
+        },
+        "idempotency_key": {
+          "type": "string"
+        },
+        "intent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "BrokerEvent": {
+      "type": "object",
+      "required": [
+        "event_kind",
+        "order_id"
+      ],
+      "properties": {
+        "event_kind": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "partial",
+            "fill",
+            "cancel",
+            "expire"
+          ]
+        },
+        "order_id": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "price": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    }
+  }
+}

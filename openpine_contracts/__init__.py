@@ -1,26 +1,64 @@
-"""OpenPine 5.0 contract kit. Zero runtime dependencies."""
+"""OpenPine contracts: schemas, hashing, compatibility. Zero required runtime deps."""
 
-from .hashing import canonical_dumps, content_hash
-from .compatibility import admit
-from .money import MoneyError, decimal_string
+from .compatibility import AdmitPolicy, AdmitRequest, AdmitResult, admit, evaluate_admit
+from .errors import (
+    AdmitError,
+    CanonicalizationError,
+    ContractError,
+    MoneyError,
+    SchemaNotFoundError,
+    SchemaValidationError,
+)
+from .hashing import SERIALIZER_ID, canonical_dumps, content_hash
 from .models import (
+    ArtifactEnvelope,
     Finality,
+    IntentKind,
+    JobState,
     RevisionState,
+    RunMode,
     SemanticProfile,
+    SupportStatus,
     WarmupMode,
 )
+from .money import DECIMAL_POLICY, Money, decimal_string, unsafe_decimal_from_float
+from .registry import get_schema, list_schema_ids, schema_bytes, schema_hash
+from .validate import validate_payload
 
-__version__ = "0.1.0"
+__version__ = "1.0.0rc1"
 
 __all__ = [
+    "AdmitError",
+    "AdmitPolicy",
+    "AdmitRequest",
+    "AdmitResult",
+    "ArtifactEnvelope",
+    "CanonicalizationError",
+    "ContractError",
+    "DECIMAL_POLICY",
     "Finality",
-    "RevisionState",
-    "SemanticProfile",
-    "WarmupMode",
-    "admit",
+    "IntentKind",
+    "JobState",
+    "Money",
     "MoneyError",
-    "decimal_string",
+    "RevisionState",
+    "RunMode",
+    "SERIALIZER_ID",
+    "SchemaNotFoundError",
+    "SchemaValidationError",
+    "SemanticProfile",
+    "SupportStatus",
+    "WarmupMode",
+    "__version__",
+    "admit",
     "canonical_dumps",
     "content_hash",
-    "__version__",
+    "decimal_string",
+    "evaluate_admit",
+    "get_schema",
+    "list_schema_ids",
+    "schema_bytes",
+    "schema_hash",
+    "unsafe_decimal_from_float",
+    "validate_payload",
 ]
