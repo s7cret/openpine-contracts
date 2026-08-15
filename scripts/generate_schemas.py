@@ -24,12 +24,31 @@ ENVELOPE_PROPS = {
 ENVELOPE_REQUIRED = list(ENVELOPE_PROPS)
 
 DECIMAL = {"type": "string", "minLength": 1, "pattern": r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"}
+DECIMAL_OR_NULL = {"anyOf": [DECIMAL, {"type": "null"}]}
 SHA = {"type": "string", "pattern": r"^sha256:[0-9a-f]{64}$"}
 SUPPORT = {"enum": ["SUPPORTED", "CONDITIONAL", "VISUAL_ONLY", "UNSUPPORTED", "NOT_APPLICABLE"]}
+JSON_NO_FLOAT = {
+    "anyOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "integer"},
+        {"type": "string"},
+        {"type": "array", "items": {"$ref": "#/$defs/JsonNoFloat"}},
+        {
+            "type": "object",
+            "additionalProperties": {"$ref": "#/$defs/JsonNoFloat"},
+        },
+    ]
+}
 
 
 def schema(
-    schema_id: str, *, required: list[str], properties: dict, defs: dict | None = None
+    schema_id: str,
+    *,
+    required: list[str],
+    properties: dict,
+    defs: dict | None = None,
+    extra: dict | None = None,
 ) -> dict:
     props = dict(ENVELOPE_PROPS)
     props["schema_id"] = {"const": schema_id}
@@ -45,7 +64,16 @@ def schema(
     }
     if defs:
         out["$defs"] = defs
+    if extra:
+        out.update(extra)
     return out
+
+
+def kind_if_then(kind: str, def_name: str) -> dict:
+    return {
+        "if": {"properties": {"kind": {"const": kind}}, "required": ["kind"]},
+        "then": {"properties": {"body": {"$ref": f"#/$defs/{def_name}"}}},
+    }
 
 
 def write(name: str, payload: dict) -> None:
@@ -81,7 +109,14 @@ def main() -> None:
                 "observed_at_utc_ms": {"type": "integer"},
                 "phase": {"type": ["string", "null"]},
                 "payload_hash": SHA,
-                "payload": {"type": "object"},
+                "payload": {"$ref": "#/$defs/JsonObjectNoFloat"},
+            },
+            defs={
+                "JsonNoFloat": JSON_NO_FLOAT,
+                "JsonObjectNoFloat": {
+                    "type": "object",
+                    "additionalProperties": {"$ref": "#/$defs/JsonNoFloat"},
+                },
             },
         ),
     )
@@ -373,6 +408,97 @@ def main() -> None:
                         "created_at_utc_ms": {"type": "integer", "minimum": 0},
                     },
                 },
+                "Instrument": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["instrument_id"],
+                    "properties": {
+                        "instrument_id": {"type": "string", "minLength": 1},
+                        "symbol": {"type": "string"},
+                        "exchange": {"type": "string"},
+                    },
+                },
+                "InstrumentRules": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["instrument_id", "tick_size"],
+                    "properties": {
+                        "instrument_id": {"type": "string", "minLength": 1},
+                        "tick_size": DECIMAL,
+                        "qty_step": DECIMAL_OR_NULL,
+                    },
+                },
+                "Timeframe": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["timeframe"],
+                    "properties": {"timeframe": {"type": "string", "minLength": 1}},
+                },
+                "Coverage": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["instrument_id", "timeframe", "start_utc_ms", "end_utc_ms"],
+                    "properties": {
+                        "instrument_id": {"type": "string"},
+                        "timeframe": {"type": "string"},
+                        "start_utc_ms": {"type": "integer"},
+                        "end_utc_ms": {"type": "integer"},
+                    },
+                },
+                "Gap": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["start_utc_ms", "end_utc_ms"],
+                    "properties": {
+                        "start_utc_ms": {"type": "integer"},
+                        "end_utc_ms": {"type": "integer"},
+                        "reason": {"type": ["string", "null"]},
+                    },
+                },
+                "Conflict": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["instrument_id", "open_time_utc_ms"],
+                    "properties": {
+                        "instrument_id": {"type": "string"},
+                        "open_time_utc_ms": {"type": "integer"},
+                        "left_hash": SHA,
+                        "right_hash": SHA,
+                    },
+                },
+                "ProviderRevision": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["revision"],
+                    "properties": {
+                        "revision": {"type": "string", "minLength": 1},
+                        "provider": {"type": ["string", "null"]},
+                    },
+                },
+                "StreamCursor": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["cursor"],
+                    "properties": {
+                        "cursor": {"type": "string", "minLength": 1},
+                        "instrument_id": {"type": ["string", "null"]},
+                    },
+                },
+            },
+            extra={
+                "allOf": [
+                    kind_if_then("instrument", "Instrument"),
+                    kind_if_then("instrument_rules", "InstrumentRules"),
+                    kind_if_then("timeframe", "Timeframe"),
+                    kind_if_then("bar", "CanonicalBar"),
+                    kind_if_then("query", "DataQuery"),
+                    kind_if_then("snapshot", "DataSnapshot"),
+                    kind_if_then("coverage", "Coverage"),
+                    kind_if_then("gap", "Gap"),
+                    kind_if_then("conflict", "Conflict"),
+                    kind_if_then("provider_revision", "ProviderRevision"),
+                    kind_if_then("stream_cursor", "StreamCursor"),
+                ]
             },
         ),
     )
@@ -396,9 +522,9 @@ def main() -> None:
                 "idempotency_key": {"type": "string", "minLength": 1},
                 "origin_command_kind": {"type": "string"},
                 "qty": DECIMAL,
-                "price": {"type": ["string", "null"]},
-                "stop": {"type": ["string", "null"]},
-                "limit": {"type": ["string", "null"]},
+                "price": DECIMAL_OR_NULL,
+                "stop": DECIMAL_OR_NULL,
+                "limit": DECIMAL_OR_NULL,
                 "from_entry": {"type": ["string", "null"]},
                 "oca_name": {"type": ["string", "null"]},
                 "oca_type": {"type": ["string", "null"]},
@@ -428,6 +554,7 @@ def main() -> None:
             defs={
                 "BrokerCommand": {
                     "type": "object",
+                    "additionalProperties": False,
                     "required": ["command_id", "command_kind", "idempotency_key"],
                     "properties": {
                         "command_id": {"type": "string"},
@@ -438,6 +565,7 @@ def main() -> None:
                 },
                 "BrokerEvent": {
                     "type": "object",
+                    "additionalProperties": False,
                     "required": ["event_kind", "order_id"],
                     "properties": {
                         "event_kind": {
@@ -455,6 +583,56 @@ def main() -> None:
                         "price": DECIMAL,
                     },
                 },
+                "OrderProjection": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["order_id", "state"],
+                    "properties": {
+                        "order_id": {"type": "string", "minLength": 1},
+                        "state": {"type": "string", "minLength": 1},
+                        "qty": DECIMAL,
+                        "price": DECIMAL_OR_NULL,
+                    },
+                },
+                "PositionProjection": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["instrument_id", "qty"],
+                    "properties": {
+                        "instrument_id": {"type": "string", "minLength": 1},
+                        "qty": DECIMAL,
+                        "avg_price": DECIMAL_OR_NULL,
+                    },
+                },
+                "AccountSnapshot": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["cash", "equity"],
+                    "properties": {
+                        "cash": DECIMAL,
+                        "equity": DECIMAL,
+                        "currency": {"type": "string", "minLength": 1},
+                    },
+                },
+                "ReconciliationReport": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["ok"],
+                    "properties": {
+                        "ok": {"type": "boolean"},
+                        "conflicts": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            },
+            extra={
+                "allOf": [
+                    kind_if_then("command", "BrokerCommand"),
+                    kind_if_then("event", "BrokerEvent"),
+                    kind_if_then("order_projection", "OrderProjection"),
+                    kind_if_then("position_projection", "PositionProjection"),
+                    kind_if_then("account_snapshot", "AccountSnapshot"),
+                    kind_if_then("reconciliation_report", "ReconciliationReport"),
+                ]
             },
         ),
     )

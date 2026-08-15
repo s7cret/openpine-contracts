@@ -317,6 +317,388 @@
           "minimum": 0
         }
       }
+    },
+    "Instrument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrument_id"
+      ],
+      "properties": {
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "exchange": {
+          "type": "string"
+        }
+      }
+    },
+    "InstrumentRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrument_id",
+        "tick_size"
+      ],
+      "properties": {
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tick_size": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "qty_step": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Timeframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeframe"
+      ],
+      "properties": {
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrument_id",
+        "timeframe",
+        "start_utc_ms",
+        "end_utc_ms"
+      ],
+      "properties": {
+        "instrument_id": {
+          "type": "string"
+        },
+        "timeframe": {
+          "type": "string"
+        },
+        "start_utc_ms": {
+          "type": "integer"
+        },
+        "end_utc_ms": {
+          "type": "integer"
+        }
+      }
+    },
+    "Gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_utc_ms",
+        "end_utc_ms"
+      ],
+      "properties": {
+        "start_utc_ms": {
+          "type": "integer"
+        },
+        "end_utc_ms": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrument_id",
+        "open_time_utc_ms"
+      ],
+      "properties": {
+        "instrument_id": {
+          "type": "string"
+        },
+        "open_time_utc_ms": {
+          "type": "integer"
+        },
+        "left_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "right_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "ProviderRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "StreamCursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cursor"
+      ],
+      "properties": {
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "instrument"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Instrument"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "instrument_rules"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/InstrumentRules"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "timeframe"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Timeframe"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "bar"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/CanonicalBar"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "query"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/DataQuery"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "snapshot"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/DataSnapshot"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "coverage"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Coverage"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "gap"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Gap"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "conflict"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Conflict"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "provider_revision"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/ProviderRevision"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "stream_cursor"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/StreamCursor"
+          }
+        }
+      }
+    }
+  ]
 }

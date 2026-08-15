@@ -117,21 +117,39 @@
       "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
     },
     "price": {
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "stop": {
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "limit": {
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "from_entry": {

@@ -72,6 +72,7 @@
   "$defs": {
     "BrokerCommand": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "command_id",
         "command_kind",
@@ -97,6 +98,7 @@
     },
     "BrokerEvent": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "event_kind",
         "order_id"
@@ -126,6 +128,230 @@
           "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
         }
       }
+    },
+    "OrderProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_id",
+        "state"
+      ],
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "qty": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "PositionProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instrument_id",
+        "qty"
+      ],
+      "properties": {
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "qty": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "avg_price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "AccountSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cash",
+        "equity"
+      ],
+      "properties": {
+        "cash": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "equity": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ReconciliationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok"
+      ],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "command"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/BrokerCommand"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "event"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/BrokerEvent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "order_projection"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/OrderProjection"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "position_projection"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/PositionProjection"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "account_snapshot"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/AccountSnapshot"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "reconciliation_report"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/ReconciliationReport"
+          }
+        }
+      }
+    }
+  ]
 }

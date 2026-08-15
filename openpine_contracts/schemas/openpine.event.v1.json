@@ -113,7 +113,43 @@
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "payload": {
-      "type": "object"
+      "$ref": "#/$defs/JsonObjectNoFloat"
+    }
+  },
+  "$defs": {
+    "JsonNoFloat": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonNoFloat"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonNoFloat"
+          }
+        }
+      ]
+    },
+    "JsonObjectNoFloat": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonNoFloat"
+      }
     }
   }
 }
