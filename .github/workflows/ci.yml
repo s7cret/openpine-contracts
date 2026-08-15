@@ -41,7 +41,6 @@ jobs:
           assert openpine_contracts.__version__ == "1.0.0rc1"
           ids = list_schema_ids()
           assert "openpine.marketdata.v2" in ids
-          assert "py.typed" in importlib.resources.files("openpine_contracts").iterdir().__class__.__name__ or True
           typed = importlib.resources.files("openpine_contracts").joinpath("py.typed")
           assert typed.is_file()
           for schema_id in ids:
