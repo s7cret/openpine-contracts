@@ -7,10 +7,13 @@ from typing import Any, Mapping
 from .errors import SchemaValidationError
 from .registry import get_schema
 
+Draft202012Validator: Any = None
 try:
-    from jsonschema import Draft202012Validator
+    from jsonschema import Draft202012Validator as _Draft202012Validator
 except ImportError:  # pragma: no cover
-    Draft202012Validator = None
+    pass
+else:
+    Draft202012Validator = _Draft202012Validator
 
 
 def validate_payload(schema_id: str, payload: Mapping[str, Any] | dict[str, Any]) -> None:
