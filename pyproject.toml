@@ -1,19 +1,18 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "openpine-contracts"
-version = "1.0.0rc1"
+version = "5.0.0rc3"
 description = "Canonical OpenPine contracts: schemas, hashing, compatibility"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
 authors = [{name = "OpenPine"}]
-dependencies = []
+dependencies = ["jsonschema>=4.20,<5"]
 
 [project.optional-dependencies]
-validation = ["jsonschema>=4.20"]
 dev = [
   "pytest>=8",
   "ruff>=0.6",

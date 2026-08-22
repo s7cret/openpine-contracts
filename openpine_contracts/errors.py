@@ -29,6 +29,10 @@ class SchemaValidationError(ContractError):
     code = "SCHEMA_VALIDATION_ERROR"
 
 
+class SchemaValidatorUnavailableError(ContractError):
+    code = "SCHEMA_VALIDATOR_UNAVAILABLE"
+
+
 class MoneyError(ContractError):
     code = "MONEY_ERROR"
 

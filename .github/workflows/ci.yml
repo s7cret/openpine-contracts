@@ -38,7 +38,7 @@ jobs:
           import importlib.resources
           import openpine_contracts
           from openpine_contracts import get_schema, list_schema_ids, schema_bytes
-          assert openpine_contracts.__version__ == "1.0.0rc1"
+          assert openpine_contracts.__version__ == "5.0.0rc3"
           ids = list_schema_ids()
           assert "openpine.marketdata.v2" in ids
           typed = importlib.resources.files("openpine_contracts").joinpath("py.typed")

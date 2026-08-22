@@ -8,12 +8,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "openpine_contracts" / "schemas"
+SEMVER_PATTERN = (
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
 
 ENVELOPE_PROPS = {
     "schema_id": {"type": "string", "minLength": 1},
-    "schema_version": {"type": "string", "minLength": 1},
+    "schema_version": {
+        "type": "string",
+        "pattern": SEMVER_PATTERN,
+    },
     "producer": {"type": "string", "minLength": 1},
-    "producer_version": {"type": "string", "minLength": 1},
+    "producer_version": {
+        "type": "string",
+        "pattern": SEMVER_PATTERN,
+    },
     "producer_commit": {"type": "string", "minLength": 1},
     "stack_id": {"type": "string", "minLength": 1},
     "created_at_utc_ms": {"type": "integer", "minimum": 0},
@@ -26,6 +36,8 @@ ENVELOPE_REQUIRED = list(ENVELOPE_PROPS)
 DECIMAL = {"type": "string", "minLength": 1, "pattern": r"^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"}
 DECIMAL_OR_NULL = {"anyOf": [DECIMAL, {"type": "null"}]}
 SHA = {"type": "string", "pattern": r"^sha256:[0-9a-f]{64}$"}
+GIT_SHA = {"type": "string", "pattern": r"^[0-9a-f]{40}$"}
+NONEMPTY_STRING = {"type": "string", "minLength": 1}
 SUPPORT = {"enum": ["SUPPORTED", "CONDITIONAL", "VISUAL_ONLY", "UNSUPPORTED", "NOT_APPLICABLE"]}
 JSON_NO_FLOAT = {
     "anyOf": [
@@ -73,6 +85,22 @@ def kind_if_then(kind: str, def_name: str) -> dict:
     return {
         "if": {"properties": {"kind": {"const": kind}}, "required": ["kind"]},
         "then": {"properties": {"body": {"$ref": f"#/$defs/{def_name}"}}},
+    }
+
+
+def kind_require(kind: str, *required: str) -> dict:
+    return {
+        "if": {"properties": {"kind": {"const": kind}}, "required": ["kind"]},
+        "then": {"required": list(required)},
+    }
+
+
+def strict_object(required: list[str], properties: dict) -> dict:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": required,
+        "properties": properties,
     }
 
 
@@ -242,26 +270,67 @@ def main() -> None:
             "openpine.generated_artifact.v2",
             required=[
                 "source_hash",
+                "frontend_artifact_hash",
                 "ast_hash",
                 "emitted_module_hash",
                 "source_map_hash",
+                "support_profile_hash",
                 "lowering_version",
+                "producer_commits",
                 "semantic_profile",
                 "required_runtime_capabilities",
                 "import_allowlist",
+                "entrypoint_module",
+                "entrypoint_class",
             ],
             properties={
                 "source_hash": SHA,
+                "frontend_artifact_hash": SHA,
                 "ast_hash": SHA,
                 "emitted_module_hash": SHA,
                 "source_map_hash": SHA,
+                "support_profile_hash": SHA,
                 "lowering_version": {"type": "string", "minLength": 1},
+                "producer_commits": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "pine2ast",
+                        "ast2python",
+                        "pinelib",
+                        "openpine-contracts",
+                    ],
+                    "properties": {
+                        "pine2ast": GIT_SHA,
+                        "ast2python": GIT_SHA,
+                        "pinelib": GIT_SHA,
+                        "openpine-contracts": GIT_SHA,
+                    },
+                },
                 "semantic_profile": {"enum": ["legacy_4x", "strict_5x"]},
                 "numeric_policy": {"type": "string"},
-                "required_runtime_capabilities": {"type": "array", "items": {"type": "string"}},
-                "import_allowlist": {"type": "array", "items": {"type": "string"}},
+                "required_runtime_capabilities": {
+                    "type": "array",
+                    "uniqueItems": True,
+                    "items": NONEMPTY_STRING,
+                },
+                "import_allowlist": {
+                    "type": "array",
+                    "uniqueItems": True,
+                    "items": {
+                        "type": "string",
+                        "pattern": r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$",
+                    },
+                },
+                "entrypoint_module": {
+                    "type": "string",
+                    "pattern": r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$",
+                },
+                "entrypoint_class": {
+                    "type": "string",
+                    "pattern": r"^[A-Za-z_][A-Za-z0-9_]*$",
+                },
                 "resource_estimate": {"type": "object"},
-                "support_profile_ref": SHA,
                 "signature_ref": {"type": ["string", "null"]},
             },
         ),
@@ -507,28 +576,109 @@ def main() -> None:
         "openpine.intent.v2.json",
         schema(
             "openpine.intent.v2",
-            required=["kind", "run_id", "strategy_id", "bar_index", "phase", "idempotency_key"],
+            required=[
+                "event_id",
+                "sequence",
+                "command_id",
+                "kind",
+                "run_id",
+                "strategy_id",
+                "series_id",
+                "instrument_id",
+                "timeframe",
+                "bar_index",
+                "bar_open_time_utc_ms",
+                "phase",
+                "recalc_iteration",
+                "semantic_profile",
+                "source_span",
+                "idempotency_key",
+            ],
             properties={
+                "schema_version": {"const": "2.1.0"},
+                "event_id": NONEMPTY_STRING,
+                "sequence": {"type": "integer", "minimum": 0},
+                "command_id": NONEMPTY_STRING,
                 "kind": {
-                    "enum": ["entry", "order", "exit", "close", "cancel", "cancel_all", "risk"]
+                    "enum": [
+                        "entry",
+                        "order",
+                        "exit",
+                        "close",
+                        "close_all",
+                        "cancel",
+                        "cancel_all",
+                        "risk",
+                    ]
                 },
-                "run_id": {"type": "string", "minLength": 1},
-                "strategy_id": {"type": "string", "minLength": 1},
+                "run_id": NONEMPTY_STRING,
+                "strategy_id": NONEMPTY_STRING,
+                "series_id": NONEMPTY_STRING,
+                "instrument_id": NONEMPTY_STRING,
+                "timeframe": NONEMPTY_STRING,
                 "bar_index": {"type": "integer", "minimum": 0},
-                "bar_open_time_utc_ms": {"type": ["integer", "null"]},
-                "phase": {"type": "string", "minLength": 1},
-                "source_span": {"type": ["object", "null"]},
+                "bar_open_time_utc_ms": {"type": "integer", "minimum": 0},
+                "phase": NONEMPTY_STRING,
+                "recalc_iteration": {"type": "integer", "minimum": 0},
+                "source_span": {"$ref": "#/$defs/SourceSpan"},
                 "semantic_profile": {"enum": ["legacy_4x", "strict_5x"]},
-                "idempotency_key": {"type": "string", "minLength": 1},
+                "idempotency_key": NONEMPTY_STRING,
                 "origin_command_kind": {"type": "string"},
+                "order_id": NONEMPTY_STRING,
+                "direction": {"enum": ["LONG", "SHORT", "long", "short"]},
                 "qty": DECIMAL,
+                "qty_percent": DECIMAL,
                 "price": DECIMAL_OR_NULL,
                 "stop": DECIMAL_OR_NULL,
                 "limit": DECIMAL_OR_NULL,
-                "from_entry": {"type": ["string", "null"]},
+                "profit": DECIMAL_OR_NULL,
+                "loss": DECIMAL_OR_NULL,
+                "trail_price": DECIMAL_OR_NULL,
+                "trail_points": DECIMAL_OR_NULL,
+                "trail_offset": DECIMAL_OR_NULL,
+                "from_entry": NONEMPTY_STRING,
                 "oca_name": {"type": ["string", "null"]},
                 "oca_type": {"type": ["string", "null"]},
                 "comment": {"type": ["string", "null"]},
+                "immediately": {"type": "boolean"},
+                "risk_rule": NONEMPTY_STRING,
+                "risk_value": DECIMAL,
+                "risk_unit": NONEMPTY_STRING,
+                "risk_scope": NONEMPTY_STRING,
+            },
+            defs={
+                "SourceSpan": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": [
+                        "start_offset",
+                        "end_offset",
+                        "start_line",
+                        "start_col",
+                        "end_line",
+                        "end_col",
+                    ],
+                    "properties": {
+                        "start_offset": {"type": "integer", "minimum": 0},
+                        "end_offset": {"type": "integer", "minimum": 0},
+                        "start_line": {"type": "integer", "minimum": 1},
+                        "start_col": {"type": "integer", "minimum": 0},
+                        "end_line": {"type": "integer", "minimum": 1},
+                        "end_col": {"type": "integer", "minimum": 0},
+                    },
+                }
+            },
+            extra={
+                "allOf": [
+                    kind_require("entry", "order_id", "direction", "qty"),
+                    kind_require("order", "order_id", "direction", "qty"),
+                    kind_require("exit", "order_id", "from_entry"),
+                    kind_require("close", "from_entry"),
+                    kind_require("close_all"),
+                    kind_require("cancel", "order_id"),
+                    kind_require("cancel_all"),
+                    kind_require("risk", "risk_rule", "risk_value", "risk_unit", "risk_scope"),
+                ]
             },
         ),
     )
@@ -638,13 +788,193 @@ def main() -> None:
     )
 
     write(
+        "openpine.worker.protocol.v2.json",
+        schema(
+            "openpine.worker.protocol.v2",
+            required=["kind", "body"],
+            properties={
+                "kind": {
+                    "enum": [
+                        "HELLO",
+                        "LOAD_ARTIFACT",
+                        "INIT_RUN",
+                        "BAR_BEGIN",
+                        "INTENT_BATCH",
+                        "BROKER_EVENT_BATCH",
+                        "RECALC_REQUEST",
+                        "RECALC_RESULT",
+                        "BAR_COMMIT",
+                        "CHECKPOINT",
+                        "RESTORE",
+                        "FINALIZE",
+                        "ABORT",
+                    ]
+                },
+                "body": {"type": "object"},
+            },
+            defs={
+                "Hello": strict_object(
+                    ["worker_id", "protocol_version", "capabilities"],
+                    {
+                        "worker_id": NONEMPTY_STRING,
+                        "protocol_version": NONEMPTY_STRING,
+                        "capabilities": {"type": "array", "items": NONEMPTY_STRING},
+                    },
+                ),
+                "LoadArtifact": strict_object(
+                    ["artifact_hash", "module_hash", "entrypoint_module", "entrypoint_class"],
+                    {
+                        "artifact_hash": SHA,
+                        "module_hash": SHA,
+                        "entrypoint_module": NONEMPTY_STRING,
+                        "entrypoint_class": NONEMPTY_STRING,
+                    },
+                ),
+                "InitRun": strict_object(
+                    ["run_id", "run_hash", "semantic_profile", "capabilities"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "run_hash": SHA,
+                        "semantic_profile": {"enum": ["legacy_4x", "strict_5x"]},
+                        "capabilities": {"type": "array", "items": NONEMPTY_STRING},
+                    },
+                ),
+                "BarBegin": strict_object(
+                    [
+                        "run_id",
+                        "bar_index",
+                        "bar_open_time_utc_ms",
+                        "recalc_iteration",
+                        "bar_hash",
+                    ],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "bar_open_time_utc_ms": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 0},
+                        "bar_hash": SHA,
+                    },
+                ),
+                "IntentBatch": strict_object(
+                    ["run_id", "bar_index", "recalc_iteration", "intents"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 0},
+                        "intents": {"type": "array", "items": {"type": "object"}},
+                    },
+                ),
+                "BrokerEventBatch": strict_object(
+                    ["run_id", "bar_index", "recalc_iteration", "broker_events"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 0},
+                        "broker_events": {"type": "array", "items": {"type": "object"}},
+                    },
+                ),
+                "RecalcRequest": strict_object(
+                    ["run_id", "bar_index", "recalc_iteration", "cause_sequence"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 1},
+                        "cause_sequence": {"type": "integer", "minimum": 0},
+                    },
+                ),
+                "RecalcResult": strict_object(
+                    ["run_id", "bar_index", "recalc_iteration", "intent_batch_hash"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 1},
+                        "intent_batch_hash": SHA,
+                    },
+                ),
+                "BarCommit": strict_object(
+                    ["run_id", "bar_index", "recalc_iteration", "state_hash"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "bar_index": {"type": "integer", "minimum": 0},
+                        "recalc_iteration": {"type": "integer", "minimum": 0},
+                        "state_hash": SHA,
+                    },
+                ),
+                "Checkpoint": strict_object(
+                    ["run_id", "checkpoint_id", "checkpoint_hash"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "checkpoint_id": NONEMPTY_STRING,
+                        "checkpoint_hash": SHA,
+                    },
+                ),
+                "Restore": strict_object(
+                    ["run_id", "checkpoint_id", "checkpoint_hash"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "checkpoint_id": NONEMPTY_STRING,
+                        "checkpoint_hash": SHA,
+                    },
+                ),
+                "Finalize": strict_object(
+                    ["run_id", "final_sequence"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "final_sequence": {"type": "integer", "minimum": 0},
+                    },
+                ),
+                "Abort": strict_object(
+                    ["run_id", "error_code", "reason"],
+                    {
+                        "run_id": NONEMPTY_STRING,
+                        "error_code": NONEMPTY_STRING,
+                        "reason": NONEMPTY_STRING,
+                    },
+                ),
+            },
+            extra={
+                "allOf": [
+                    kind_if_then("HELLO", "Hello"),
+                    kind_if_then("LOAD_ARTIFACT", "LoadArtifact"),
+                    kind_if_then("INIT_RUN", "InitRun"),
+                    kind_if_then("BAR_BEGIN", "BarBegin"),
+                    kind_if_then("INTENT_BATCH", "IntentBatch"),
+                    kind_if_then("BROKER_EVENT_BATCH", "BrokerEventBatch"),
+                    kind_if_then("RECALC_REQUEST", "RecalcRequest"),
+                    kind_if_then("RECALC_RESULT", "RecalcResult"),
+                    kind_if_then("BAR_COMMIT", "BarCommit"),
+                    kind_if_then("CHECKPOINT", "Checkpoint"),
+                    kind_if_then("RESTORE", "Restore"),
+                    kind_if_then("FINALIZE", "Finalize"),
+                    kind_if_then("ABORT", "Abort"),
+                ]
+            },
+        ),
+    )
+
+    write(
         "openpine.run.v2.json",
         schema(
             "openpine.run.v2",
-            required=["run_id", "kind", "state", "semantic_profile", "warmup_policy"],
+            required=[
+                "run_id",
+                "run_mode",
+                "state",
+                "stack_manifest_hash",
+                "wheel_identities",
+                "schema_hashes",
+                "generated_artifact_hash",
+                "data_snapshot_hash",
+                "semantic_profile",
+                "finality_policy",
+                "warmup_policy",
+                "score_policy",
+                "required_capabilities",
+            ],
             properties={
-                "run_id": {"type": "string", "minLength": 1},
-                "kind": {
+                "schema_version": {"const": "2.1.0"},
+                "run_id": NONEMPTY_STRING,
+                "run_mode": {
                     "enum": [
                         "COMPILE",
                         "BACKTEST",
@@ -655,24 +985,65 @@ def main() -> None:
                         "BACKFILL",
                     ]
                 },
-                "state": {"type": "string", "minLength": 1},
+                "state": NONEMPTY_STRING,
+                "stack_manifest_hash": SHA,
+                "wheel_identities": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"$ref": "#/$defs/WheelIdentity"},
+                },
+                "schema_hashes": {
+                    "type": "object",
+                    "minProperties": 1,
+                    "additionalProperties": SHA,
+                },
                 "source_hash": SHA,
                 "ast_hash": SHA,
                 "generated_artifact_hash": SHA,
                 "config_hash": SHA,
                 "data_snapshot_hash": SHA,
                 "semantic_profile": {"enum": ["legacy_4x", "strict_5x"]},
+                "finality_policy": {"enum": ["CLOSED_BAR_ONLY", "ALLOW_OPEN"]},
                 "numeric_policy": {"type": "string"},
                 "fill_policy": {"type": "string"},
                 "warmup_policy": {
                     "enum": ["CALC_ONLY", "TRADE_THROUGH_UNSCORED", "CALC_THEN_RESET_BROKER"]
                 },
+                "score_policy": NONEMPTY_STRING,
+                "required_capabilities": {
+                    "type": "array",
+                    "items": NONEMPTY_STRING,
+                    "uniqueItems": True,
+                },
+                "broker_adapter_ref": NONEMPTY_STRING,
+                "broker_account_ref": NONEMPTY_STRING,
                 "score_window": {"type": "object"},
                 "seed": {"type": ["integer", "null"]},
                 "input_artifacts": {"type": "array", "items": {"type": "object"}},
                 "output_artifacts": {"type": "array", "items": {"type": "object"}},
                 "diagnostics": {"type": "array", "items": {"type": "object"}},
                 "completed_at_utc_ms": {"type": ["integer", "null"]},
+            },
+            defs={
+                "WheelIdentity": strict_object(
+                    ["name", "version", "content_hash"],
+                    {
+                        "name": NONEMPTY_STRING,
+                        "version": NONEMPTY_STRING,
+                        "content_hash": SHA,
+                    },
+                )
+            },
+            extra={
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {"run_mode": {"enum": ["PAPER", "LIVE"]}},
+                            "required": ["run_mode"],
+                        },
+                        "then": {"required": ["broker_adapter_ref", "broker_account_ref"]},
+                    }
+                ]
             },
         ),
     )
@@ -701,10 +1072,11 @@ def main() -> None:
         "openpine.job.v1.json",
         schema(
             "openpine.job.v1",
-            required=["job_id", "kind", "state"],
+            required=["job_id", "kind", "state", "version"],
             properties={
                 "job_id": {"type": "string", "minLength": 1},
                 "kind": {"type": "string", "minLength": 1},
+                "version": {"type": "integer", "minimum": 1},
                 "state": {
                     "enum": [
                         "QUEUED",

@@ -19,7 +19,7 @@ def _envelope(schema_id: str, extra: dict[str, object]) -> dict[str, object]:
         "schema_id": schema_id,
         "schema_version": "1.0.0-rc.1",
         "producer": "openpine-contracts-tests",
-        "producer_version": "1.0.0rc1",
+        "producer_version": "5.0.0-rc.3",
         "producer_commit": "deadbeef",
         "stack_id": "stack-test",
         "created_at_utc_ms": 0,

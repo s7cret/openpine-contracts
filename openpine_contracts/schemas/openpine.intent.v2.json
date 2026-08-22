@@ -14,11 +14,21 @@
     "serializer_id",
     "content_hash_alg",
     "content_hash",
+    "event_id",
+    "sequence",
+    "command_id",
     "kind",
     "run_id",
     "strategy_id",
+    "series_id",
+    "instrument_id",
+    "timeframe",
     "bar_index",
+    "bar_open_time_utc_ms",
     "phase",
+    "recalc_iteration",
+    "semantic_profile",
+    "source_span",
     "idempotency_key"
   ],
   "properties": {
@@ -26,8 +36,7 @@
       "const": "openpine.intent.v2"
     },
     "schema_version": {
-      "type": "string",
-      "minLength": 1
+      "const": "2.1.0"
     },
     "producer": {
       "type": "string",
@@ -35,7 +44,7 @@
     },
     "producer_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "producer_commit": {
       "type": "string",
@@ -59,12 +68,25 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "command_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "kind": {
       "enum": [
         "entry",
         "order",
         "exit",
         "close",
+        "close_all",
         "cancel",
         "cancel_all",
         "risk"
@@ -78,25 +100,36 @@
       "type": "string",
       "minLength": 1
     },
+    "series_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeframe": {
+      "type": "string",
+      "minLength": 1
+    },
     "bar_index": {
       "type": "integer",
       "minimum": 0
     },
     "bar_open_time_utc_ms": {
-      "type": [
-        "integer",
-        "null"
-      ]
+      "type": "integer",
+      "minimum": 0
     },
     "phase": {
       "type": "string",
       "minLength": 1
     },
+    "recalc_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
     "source_span": {
-      "type": [
-        "object",
-        "null"
-      ]
+      "$ref": "#/$defs/SourceSpan"
     },
     "semantic_profile": {
       "enum": [
@@ -111,7 +144,24 @@
     "origin_command_kind": {
       "type": "string"
     },
+    "order_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "direction": {
+      "enum": [
+        "LONG",
+        "SHORT",
+        "long",
+        "short"
+      ]
+    },
     "qty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "qty_percent": {
       "type": "string",
       "minLength": 1,
       "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
@@ -152,11 +202,69 @@
         }
       ]
     },
-    "from_entry": {
-      "type": [
-        "string",
-        "null"
+    "profit": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
       ]
+    },
+    "loss": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trail_price": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trail_points": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "trail_offset": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "from_entry": {
+      "type": "string",
+      "minLength": 1
     },
     "oca_name": {
       "type": [
@@ -175,6 +283,208 @@
         "string",
         "null"
       ]
+    },
+    "immediately": {
+      "type": "boolean"
+    },
+    "risk_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "risk_value": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "risk_unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "risk_scope": {
+      "type": "string",
+      "minLength": 1
     }
-  }
+  },
+  "$defs": {
+    "SourceSpan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_offset",
+        "end_offset",
+        "start_line",
+        "start_col",
+        "end_line",
+        "end_col"
+      ],
+      "properties": {
+        "start_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "start_col": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_col": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "entry"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "order_id",
+          "direction",
+          "qty"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "order"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "order_id",
+          "direction",
+          "qty"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "exit"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "order_id",
+          "from_entry"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "close"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "from_entry"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "close_all"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "cancel"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "order_id"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "cancel_all"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": []
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "risk"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "risk_rule",
+          "risk_value",
+          "risk_unit",
+          "risk_scope"
+        ]
+      }
+    }
+  ]
 }

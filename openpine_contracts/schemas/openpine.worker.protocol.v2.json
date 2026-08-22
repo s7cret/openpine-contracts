@@ -1,0 +1,681 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.worker.protocol.v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "kind",
+    "body"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.worker.protocol.v2"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer_commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "kind": {
+      "enum": [
+        "HELLO",
+        "LOAD_ARTIFACT",
+        "INIT_RUN",
+        "BAR_BEGIN",
+        "INTENT_BATCH",
+        "BROKER_EVENT_BATCH",
+        "RECALC_REQUEST",
+        "RECALC_RESULT",
+        "BAR_COMMIT",
+        "CHECKPOINT",
+        "RESTORE",
+        "FINALIZE",
+        "ABORT"
+      ]
+    },
+    "body": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "Hello": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "worker_id",
+        "protocol_version",
+        "capabilities"
+      ],
+      "properties": {
+        "worker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "protocol_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "LoadArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_hash",
+        "module_hash",
+        "entrypoint_module",
+        "entrypoint_class"
+      ],
+      "properties": {
+        "artifact_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "module_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "entrypoint_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoint_class": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "InitRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "run_hash",
+        "semantic_profile",
+        "capabilities"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "BarBegin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "recalc_iteration",
+        "bar_hash"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "IntentBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "recalc_iteration",
+        "intents"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "intents": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "BrokerEventBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "recalc_iteration",
+        "broker_events"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "broker_events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "RecalcRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "recalc_iteration",
+        "cause_sequence"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cause_sequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "RecalcResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "recalc_iteration",
+        "intent_batch_hash"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "intent_batch_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "BarCommit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "bar_index",
+        "recalc_iteration",
+        "state_hash"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "state_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "Checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "checkpoint_id",
+        "checkpoint_hash"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "Restore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "checkpoint_id",
+        "checkpoint_hash"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpoint_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "Finalize": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "final_sequence"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "final_sequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Abort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "error_code",
+        "reason"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "error_code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "HELLO"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Hello"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "LOAD_ARTIFACT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/LoadArtifact"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "INIT_RUN"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/InitRun"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "BAR_BEGIN"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/BarBegin"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "INTENT_BATCH"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/IntentBatch"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "BROKER_EVENT_BATCH"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/BrokerEventBatch"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "RECALC_REQUEST"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/RecalcRequest"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "RECALC_RESULT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/RecalcResult"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "BAR_COMMIT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/BarCommit"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "CHECKPOINT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Checkpoint"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "RESTORE"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Restore"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "FINALIZE"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Finalize"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "ABORT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "$ref": "#/$defs/Abort"
+          }
+        }
+      }
+    }
+  ]
+}

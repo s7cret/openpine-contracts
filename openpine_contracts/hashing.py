@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import math
 import unicodedata
-from typing import Any
+from typing import Any, Mapping
 
 from .errors import CanonicalizationError
 
@@ -28,7 +29,13 @@ def _normalize(value: Any) -> Any:
                     "map keys must be strings",
                     details={"key_type": type(key).__name__},
                 )
-            out[unicodedata.normalize("NFC", key)] = _normalize(item)
+            normalized_key = unicodedata.normalize("NFC", key)
+            if normalized_key in out:
+                raise CanonicalizationError(
+                    "map keys collide after NFC normalization",
+                    details={"normalized_key": normalized_key},
+                )
+            out[normalized_key] = _normalize(item)
         return {key: out[key] for key in sorted(out)}
     if isinstance(value, (list, tuple)):
         return [_normalize(item) for item in value]
@@ -94,3 +101,39 @@ def content_hash(
     }
     digest = hashlib.sha256(canonical_dumps(domain).encode("utf-8")).hexdigest()
     return f"{alg}:{digest}"
+
+
+def seal_content_hash(
+    payload: Mapping[str, Any],
+    *,
+    schema_id: str | None = None,
+    alg: str = CONTENT_HASH_ALG,
+) -> dict[str, Any]:
+    """Return a copy sealed over its content, excluding any prior root hash."""
+    unsealed = dict(payload)
+    unsealed.pop("content_hash", None)
+    hash_schema_id = schema_id if schema_id is not None else unsealed.get("schema_id")
+    if type(hash_schema_id) is not str:
+        raise CanonicalizationError("schema_id must be a string for content sealing")
+    sealed = dict(unsealed)
+    hash_view = dict(unsealed)
+    hash_view.pop("created_at_utc_ms", None)
+    sealed["content_hash"] = content_hash(hash_view, alg=alg, schema_id=hash_schema_id)
+    return sealed
+
+
+def verify_content_hash(
+    payload: Mapping[str, Any],
+    *,
+    schema_id: str | None = None,
+    alg: str = CONTENT_HASH_ALG,
+) -> bool:
+    """Recompute and compare a root content hash without trusting the stored value."""
+    expected = payload.get("content_hash")
+    if type(expected) is not str:
+        return False
+    try:
+        actual = seal_content_hash(payload, schema_id=schema_id, alg=alg)["content_hash"]
+    except CanonicalizationError:
+        return False
+    return hmac.compare_digest(expected, actual)

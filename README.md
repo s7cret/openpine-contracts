@@ -5,8 +5,9 @@ Canonical contract train for OpenPine 5.0.
 This package owns schemas, IDs, compatibility, and canonical hashing.
 It does not own Pine parsing, runtime, fills, or market adapters.
 
-Version policy: contracts SemVer `1.0.0-rc.1` (PEP 440 `1.0.0rc1`).
-The OpenPine stack train (`5.0.0-rc.1`) pins this package; the two version lines are not mixed.
+Version policy: the coordinated stack candidate is `5.0.0-rc.3`
+(PEP 440 `5.0.0rc3`). Internal wheel dependencies use this exact version;
+immutable Git and wheel hashes are bound by the external stack candidate manifest.
 See `docs/adr/001-versioning.md`.
 
 ## Catalog

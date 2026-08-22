@@ -16,7 +16,8 @@
     "content_hash",
     "job_id",
     "kind",
-    "state"
+    "state",
+    "version"
   ],
   "properties": {
     "schema_id": {
@@ -24,7 +25,7 @@
     },
     "schema_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "producer": {
       "type": "string",
@@ -32,7 +33,7 @@
     },
     "producer_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "producer_commit": {
       "type": "string",
@@ -63,6 +64,10 @@
     "kind": {
       "type": "string",
       "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
     },
     "state": {
       "enum": [

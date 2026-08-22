@@ -24,6 +24,7 @@ CATALOG: tuple[str, ...] = (
     "openpine.marketdata.v2",
     "openpine.intent.v2",
     "openpine.broker.v2",
+    "openpine.worker.protocol.v2",
     "openpine.run.v2",
     "openpine.trial.v2",
     "openpine.job.v1",

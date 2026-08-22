@@ -1,4 +1,4 @@
-"""OpenPine contracts: schemas, hashing, compatibility. Zero required runtime deps."""
+"""OpenPine contracts: schemas, hashing, validation, and compatibility."""
 
 from .compatibility import AdmitPolicy, AdmitRequest, AdmitResult, admit, evaluate_admit
 from .errors import (
@@ -8,8 +8,15 @@ from .errors import (
     MoneyError,
     SchemaNotFoundError,
     SchemaValidationError,
+    SchemaValidatorUnavailableError,
 )
-from .hashing import SERIALIZER_ID, canonical_dumps, content_hash
+from .hashing import (
+    SERIALIZER_ID,
+    canonical_dumps,
+    content_hash,
+    seal_content_hash,
+    verify_content_hash,
+)
 from .models import (
     ArtifactEnvelope,
     Finality,
@@ -25,7 +32,7 @@ from .money import DECIMAL_POLICY, Money, decimal_string, unsafe_decimal_from_fl
 from .registry import get_schema, list_schema_ids, schema_bytes, schema_hash
 from .validate import validate_payload
 
-__version__ = "1.0.0rc1"
+__version__ = "5.0.0rc3"
 
 __all__ = [
     "AdmitError",
@@ -46,6 +53,7 @@ __all__ = [
     "SERIALIZER_ID",
     "SchemaNotFoundError",
     "SchemaValidationError",
+    "SchemaValidatorUnavailableError",
     "SemanticProfile",
     "SupportStatus",
     "WarmupMode",
@@ -59,6 +67,8 @@ __all__ = [
     "list_schema_ids",
     "schema_bytes",
     "schema_hash",
+    "seal_content_hash",
     "unsafe_decimal_from_float",
     "validate_payload",
+    "verify_content_hash",
 ]

@@ -15,13 +15,18 @@
     "content_hash_alg",
     "content_hash",
     "source_hash",
+    "frontend_artifact_hash",
     "ast_hash",
     "emitted_module_hash",
     "source_map_hash",
+    "support_profile_hash",
     "lowering_version",
+    "producer_commits",
     "semantic_profile",
     "required_runtime_capabilities",
-    "import_allowlist"
+    "import_allowlist",
+    "entrypoint_module",
+    "entrypoint_class"
   ],
   "properties": {
     "schema_id": {
@@ -29,7 +34,7 @@
     },
     "schema_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "producer": {
       "type": "string",
@@ -37,7 +42,7 @@
     },
     "producer_version": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
     },
     "producer_commit": {
       "type": "string",
@@ -65,6 +70,10 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "frontend_artifact_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "ast_hash": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
@@ -77,9 +86,41 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "support_profile_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "lowering_version": {
       "type": "string",
       "minLength": 1
+    },
+    "producer_commits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pine2ast",
+        "ast2python",
+        "pinelib",
+        "openpine-contracts"
+      ],
+      "properties": {
+        "pine2ast": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "ast2python": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "pinelib": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "openpine-contracts": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
     },
     "semantic_profile": {
       "enum": [
@@ -92,22 +133,30 @@
     },
     "required_runtime_capabilities": {
       "type": "array",
+      "uniqueItems": true,
       "items": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "import_allowlist": {
       "type": "array",
+      "uniqueItems": true,
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
       }
+    },
+    "entrypoint_module": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+    },
+    "entrypoint_class": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
     },
     "resource_estimate": {
       "type": "object"
-    },
-    "support_profile_ref": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "signature_ref": {
       "type": [
