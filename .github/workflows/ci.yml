@@ -2,8 +2,13 @@ name: ci
 
 on:
   push:
-    branches: [main, "feat/**"]
+    branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   python:
@@ -38,7 +43,7 @@ jobs:
           import importlib.resources
           import openpine_contracts
           from openpine_contracts import get_schema, list_schema_ids, schema_bytes
-          assert openpine_contracts.__version__ == "5.0.0rc3"
+          assert openpine_contracts.__version__ == "5.0.0rc4"
           ids = list_schema_ids()
           assert "openpine.marketdata.v2" in ids
           typed = importlib.resources.files("openpine_contracts").joinpath("py.typed")

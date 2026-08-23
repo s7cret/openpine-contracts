@@ -14,6 +14,11 @@
     "serializer_id",
     "content_hash_alg",
     "content_hash",
+    "session_id",
+    "run_id",
+    "sequence",
+    "correlation_id",
+    "causation_id",
     "kind",
     "body"
   ],
@@ -22,8 +27,7 @@
       "const": "openpine.worker.protocol.v2"
     },
     "schema_version": {
-      "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+      "const": "2.1.0"
     },
     "producer": {
       "type": "string",
@@ -35,11 +39,11 @@
     },
     "producer_commit": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^[0-9a-f]{40}$"
     },
     "stack_id": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "created_at_utc_ms": {
       "type": "integer",
@@ -53,7 +57,29 @@
     },
     "content_hash": {
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "causation_id": {
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "kind": {
       "enum": [
@@ -91,11 +117,11 @@
           "minLength": 1
         },
         "protocol_version": {
-          "type": "string",
-          "minLength": 1
+          "const": "2.1.0"
         },
         "capabilities": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "minLength": 1
@@ -115,11 +141,11 @@
       "properties": {
         "artifact_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
         },
         "module_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
         },
         "entrypoint_module": {
           "type": "string",
@@ -137,6 +163,8 @@
       "required": [
         "run_id",
         "run_hash",
+        "execution_context_hash",
+        "execution_context",
         "semantic_profile",
         "capabilities"
       ],
@@ -147,7 +175,14 @@
         },
         "run_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "execution_context_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "execution_context": {
+          "$ref": "openpine.execution_context.v1"
         },
         "semantic_profile": {
           "enum": [
@@ -172,7 +207,9 @@
         "bar_index",
         "bar_open_time_utc_ms",
         "recalc_iteration",
-        "bar_hash"
+        "bar_hash",
+        "bar",
+        "broker_projection"
       ],
       "properties": {
         "run_id": {
@@ -193,7 +230,13 @@
         },
         "bar_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "bar": {
+          "$ref": "openpine.marketdata.bar.v2"
+        },
+        "broker_projection": {
+          "$ref": "openpine.broker_projection.v1"
         }
       }
     },
@@ -204,6 +247,7 @@
         "run_id",
         "bar_index",
         "recalc_iteration",
+        "intent_batch_hash",
         "intents"
       ],
       "properties": {
@@ -219,10 +263,14 @@
           "type": "integer",
           "minimum": 0
         },
+        "intent_batch_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
         "intents": {
           "type": "array",
           "items": {
-            "type": "object"
+            "$ref": "openpine.intent.v2"
           }
         }
       }
@@ -234,6 +282,7 @@
         "run_id",
         "bar_index",
         "recalc_iteration",
+        "broker_event_batch_hash",
         "broker_events"
       ],
       "properties": {
@@ -249,10 +298,14 @@
           "type": "integer",
           "minimum": 0
         },
+        "broker_event_batch_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
         "broker_events": {
           "type": "array",
           "items": {
-            "type": "object"
+            "$ref": "openpine.broker.v2"
           }
         }
       }
@@ -309,7 +362,7 @@
         },
         "intent_batch_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
         }
       }
     },
@@ -320,7 +373,8 @@
         "run_id",
         "bar_index",
         "recalc_iteration",
-        "state_hash"
+        "state_hash",
+        "broker_projection_hash"
       ],
       "properties": {
         "run_id": {
@@ -337,7 +391,11 @@
         },
         "state_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "broker_projection_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
         }
       }
     },
@@ -347,7 +405,8 @@
       "required": [
         "run_id",
         "checkpoint_id",
-        "checkpoint_hash"
+        "checkpoint_hash",
+        "committed_sequence"
       ],
       "properties": {
         "run_id": {
@@ -360,7 +419,11 @@
         },
         "checkpoint_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "committed_sequence": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -370,7 +433,8 @@
       "required": [
         "run_id",
         "checkpoint_id",
-        "checkpoint_hash"
+        "checkpoint_hash",
+        "committed_sequence"
       ],
       "properties": {
         "run_id": {
@@ -383,7 +447,11 @@
         },
         "checkpoint_hash": {
           "type": "string",
-          "pattern": "^sha256:[0-9a-f]{64}$"
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "committed_sequence": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -392,7 +460,9 @@
       "additionalProperties": false,
       "required": [
         "run_id",
-        "final_sequence"
+        "final_sequence",
+        "final_state_hash",
+        "broker_projection_hash"
       ],
       "properties": {
         "run_id": {
@@ -402,6 +472,14 @@
         "final_sequence": {
           "type": "integer",
           "minimum": 0
+        },
+        "final_state_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "broker_projection_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
         }
       }
     },

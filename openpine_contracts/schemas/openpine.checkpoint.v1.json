@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.checkpoint.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "checkpoint_id",
+    "run_id",
+    "session_id",
+    "bar_index",
+    "bar_open_time_utc_ms",
+    "recalc_iteration",
+    "committed_sequence",
+    "bar_commit_hash",
+    "generated_artifact_hash",
+    "data_snapshot_hash",
+    "stack_manifest_hash",
+    "engine_checkpoint_hash",
+    "worker_checkpoint_hash",
+    "combined_hash"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.checkpoint.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "stack_id": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bar_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_open_time_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recalc_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "committed_sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_commit_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "generated_artifact_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "data_snapshot_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "stack_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "engine_checkpoint_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "worker_checkpoint_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "combined_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    }
+  }
+}

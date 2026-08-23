@@ -14,9 +14,9 @@ def _envelope(schema_id: str, schema_version: str = "2.0.0") -> dict[str, object
         "schema_id": schema_id,
         "schema_version": schema_version,
         "producer": "openpine-contract-tests",
-        "producer_version": "5.0.0-rc.3",
-        "producer_commit": "deadbeef",
-        "stack_id": "stack-rc3",
+        "producer_version": "5.0.0-rc.4",
+        "producer_commit": "d" * 40,
+        "stack_id": HASH_C,
         "created_at_utc_ms": 0,
         "serializer_id": "openpine.canonical.json.v1",
         "content_hash_alg": "sha256",
@@ -30,7 +30,7 @@ def _assert_invalid(schema_id: str, payload: Mapping[str, object]) -> None:
 
 
 def _intent(kind: str, **fields: object) -> dict[str, object]:
-    payload = _envelope("openpine.intent.v2", "2.1.0")
+    payload = _envelope("openpine.intent.v2", "2.2.0")
     payload.update(
         {
             "event_id": "evt-1",
@@ -48,6 +48,8 @@ def _intent(kind: str, **fields: object) -> dict[str, object]:
             "recalc_iteration": 0,
             "semantic_profile": "strict_5x",
             "source_span": {
+                "known": True,
+                "source_hash": HASH_B,
                 "start_offset": 10,
                 "end_offset": 20,
                 "start_line": 2,
@@ -80,7 +82,7 @@ INTENT_CASES = {
 
 
 @pytest.mark.parametrize(("kind", "fields"), INTENT_CASES.items())
-def test_intent_v2_1_accepts_each_strict_kind(kind: str, fields: dict[str, object]) -> None:
+def test_intent_v2_2_accepts_each_strict_kind(kind: str, fields: dict[str, object]) -> None:
     validate_payload("openpine.intent.v2", _intent(kind, **fields))
 
 
@@ -134,7 +136,7 @@ def test_intent_rejects_missing_source_of_truth_fields(missing: str) -> None:
     _assert_invalid("openpine.intent.v2", payload)
 
 
-def test_intent_requires_schema_version_2_1_0() -> None:
+def test_intent_requires_schema_version_2_2_0() -> None:
     payload = _intent("close_all")
     payload["schema_version"] = "2.0.0"
     _assert_invalid("openpine.intent.v2", payload)
@@ -208,15 +210,25 @@ def test_generated_artifact_requires_all_exact_producer_commits() -> None:
 
 
 def _worker_message(kind: str, body: dict[str, object]) -> dict[str, object]:
-    payload = _envelope("openpine.worker.protocol.v2")
-    payload.update({"kind": kind, "body": body})
+    payload = _envelope("openpine.worker.protocol.v2", "2.1.0")
+    payload.update(
+        {
+            "session_id": "session-1",
+            "run_id": "run-1",
+            "sequence": 0,
+            "correlation_id": "correlation-1",
+            "causation_id": None,
+            "kind": kind,
+            "body": body,
+        }
+    )
     return payload
 
 
 WORKER_CASES = {
     "HELLO": {
         "worker_id": "worker-1",
-        "protocol_version": "2.0.0",
+        "protocol_version": "2.1.0",
         "capabilities": ["closed_bar"],
     },
     "LOAD_ARTIFACT": {
@@ -228,6 +240,7 @@ WORKER_CASES = {
     "INIT_RUN": {
         "run_id": "run-1",
         "run_hash": HASH_A,
+        "execution_context_hash": HASH_B,
         "semantic_profile": "strict_5x",
         "capabilities": ["closed_bar"],
     },
@@ -242,12 +255,14 @@ WORKER_CASES = {
         "run_id": "run-1",
         "bar_index": 1,
         "recalc_iteration": 0,
+        "intent_batch_hash": HASH_A,
         "intents": [],
     },
     "BROKER_EVENT_BATCH": {
         "run_id": "run-1",
         "bar_index": 1,
         "recalc_iteration": 0,
+        "broker_event_batch_hash": HASH_B,
         "broker_events": [],
     },
     "RECALC_REQUEST": {
@@ -267,18 +282,26 @@ WORKER_CASES = {
         "bar_index": 1,
         "recalc_iteration": 1,
         "state_hash": HASH_A,
+        "broker_projection_hash": HASH_B,
     },
     "CHECKPOINT": {
         "run_id": "run-1",
         "checkpoint_id": "cp-1",
         "checkpoint_hash": HASH_A,
+        "committed_sequence": 9,
     },
     "RESTORE": {
         "run_id": "run-1",
         "checkpoint_id": "cp-1",
         "checkpoint_hash": HASH_A,
+        "committed_sequence": 9,
     },
-    "FINALIZE": {"run_id": "run-1", "final_sequence": 9},
+    "FINALIZE": {
+        "run_id": "run-1",
+        "final_sequence": 9,
+        "final_state_hash": HASH_A,
+        "broker_projection_hash": HASH_B,
+    },
     "ABORT": {"run_id": "run-1", "error_code": "RUNTIME_ABORT", "reason": "stopped"},
 }
 
@@ -287,11 +310,13 @@ def test_worker_protocol_is_registered() -> None:
     assert "openpine.worker.protocol.v2" in list_schema_ids(include_aliases=False)
 
 
-@pytest.mark.parametrize(("kind", "body"), WORKER_CASES.items())
-def test_worker_protocol_accepts_each_discriminated_message(
-    kind: str, body: dict[str, object]
-) -> None:
-    validate_payload("openpine.worker.protocol.v2", _worker_message(kind, body))
+def test_rc3_worker_protocol_envelope_is_rejected_by_v2_1_contract() -> None:
+    payload = _worker_message("HELLO", dict(WORKER_CASES["HELLO"]))
+    payload["schema_version"] = "2.0.0"
+    body = payload["body"]
+    assert isinstance(body, dict)
+    body["protocol_version"] = "2.0.0"
+    _assert_invalid("openpine.worker.protocol.v2", payload)
 
 
 @pytest.mark.parametrize("kind", WORKER_CASES)
@@ -315,7 +340,7 @@ def _run(run_mode: str = "BACKTEST") -> dict[str, object]:
             "wheel_identities": [
                 {
                     "name": "openpine-runtime",
-                    "version": "5.0.0-rc.3",
+                    "version": "5.0.0-rc.4",
                     "content_hash": HASH_B,
                 }
             ],

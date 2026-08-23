@@ -9,6 +9,7 @@ from .errors import (
     SchemaNotFoundError,
     SchemaValidationError,
     SchemaValidatorUnavailableError,
+    WorkerProtocolSemanticError,
 )
 from .hashing import (
     SERIALIZER_ID,
@@ -31,8 +32,9 @@ from .models import (
 from .money import DECIMAL_POLICY, Money, decimal_string, unsafe_decimal_from_float
 from .registry import get_schema, list_schema_ids, schema_bytes, schema_hash
 from .validate import validate_payload
+from .worker_protocol import validate_worker_protocol_sequence
 
-__version__ = "5.0.0rc3"
+__version__ = "5.0.0rc4"
 
 __all__ = [
     "AdmitError",
@@ -57,6 +59,7 @@ __all__ = [
     "SemanticProfile",
     "SupportStatus",
     "WarmupMode",
+    "WorkerProtocolSemanticError",
     "__version__",
     "admit",
     "canonical_dumps",
@@ -70,5 +73,6 @@ __all__ = [
     "seal_content_hash",
     "unsafe_decimal_from_float",
     "validate_payload",
+    "validate_worker_protocol_sequence",
     "verify_content_hash",
 ]

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openpine-contracts"
-version = "5.0.0rc3"
+version = "5.0.0rc4"
 description = "Canonical OpenPine contracts: schemas, hashing, compatibility"
 readme = "README.md"
 requires-python = ">=3.11"

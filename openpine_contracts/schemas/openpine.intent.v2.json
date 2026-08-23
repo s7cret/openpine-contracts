@@ -36,7 +36,7 @@
       "const": "openpine.intent.v2"
     },
     "schema_version": {
-      "const": "2.1.0"
+      "const": "2.2.0"
     },
     "producer": {
       "type": "string",
@@ -48,11 +48,11 @@
     },
     "producer_commit": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^[0-9a-f]{40}$"
     },
     "stack_id": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "created_at_utc_ms": {
       "type": "integer",
@@ -66,7 +66,7 @@
     },
     "content_hash": {
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "event_id": {
       "type": "string",
@@ -129,7 +129,7 @@
       "minimum": 0
     },
     "source_span": {
-      "$ref": "#/$defs/SourceSpan"
+      "$ref": "#/$defs/SourceProvenance"
     },
     "semantic_profile": {
       "enum": [
@@ -141,9 +141,6 @@
       "type": "string",
       "minLength": 1
     },
-    "origin_command_kind": {
-      "type": "string"
-    },
     "order_id": {
       "type": "string",
       "minLength": 1
@@ -151,32 +148,12 @@
     "direction": {
       "enum": [
         "LONG",
-        "SHORT",
-        "long",
-        "short"
+        "SHORT"
       ]
     },
     "qty": {
       "type": "string",
-      "minLength": 1,
-      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-    },
-    "qty_percent": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-    },
-    "price": {
-      "anyOf": [
-        {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
     },
     "stop": {
       "anyOf": [
@@ -201,6 +178,41 @@
           "type": "null"
         }
       ]
+    },
+    "oca_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "oca_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "comment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "alert_message": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "disable_alert": {
+      "type": "boolean"
+    },
+    "from_entry": {
+      "type": "string",
+      "minLength": 1
+    },
+    "qty_percent": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
     },
     "profit": {
       "anyOf": [
@@ -262,28 +274,6 @@
         }
       ]
     },
-    "from_entry": {
-      "type": "string",
-      "minLength": 1
-    },
-    "oca_name": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "oca_type": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "comment": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
     "immediately": {
       "type": "boolean"
     },
@@ -306,10 +296,22 @@
     }
   },
   "$defs": {
-    "SourceSpan": {
+    "SourceProvenance": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/KnownSourceProvenance"
+        },
+        {
+          "$ref": "#/$defs/UnknownSourceProvenance"
+        }
+      ]
+    },
+    "KnownSourceProvenance": {
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "known",
+        "source_hash",
         "start_offset",
         "end_offset",
         "start_line",
@@ -318,6 +320,13 @@
         "end_col"
       ],
       "properties": {
+        "known": {
+          "const": true
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
         "start_offset": {
           "type": "integer",
           "minimum": 0
@@ -343,148 +352,1484 @@
           "minimum": 0
         }
       }
+    },
+    "UnknownSourceProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "known",
+        "source_hash",
+        "start_offset",
+        "end_offset",
+        "start_line",
+        "start_col",
+        "end_line",
+        "end_col"
+      ],
+      "properties": {
+        "known": {
+          "const": false
+        },
+        "source_hash": {
+          "type": "null"
+        },
+        "start_offset": {
+          "type": "null"
+        },
+        "end_offset": {
+          "type": "null"
+        },
+        "start_line": {
+          "type": "null"
+        },
+        "start_col": {
+          "type": "null"
+        },
+        "end_line": {
+          "type": "null"
+        },
+        "end_col": {
+          "type": "null"
+        }
+      }
+    },
+    "EntryIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "order_id",
+        "direction",
+        "qty"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "entry"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oca_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "oca_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disable_alert": {
+          "type": "boolean"
+        }
+      }
+    },
+    "OrderIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "order_id",
+        "direction",
+        "qty"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "order"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oca_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "oca_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disable_alert": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ExitIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "order_id",
+        "from_entry"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "exit"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_entry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "qty_percent": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "profit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "loss": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trail_price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trail_points": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trail_offset": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oca_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disable_alert": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CloseIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "from_entry"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "close"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_entry": {
+          "type": "string",
+          "minLength": 1
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "qty_percent": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "immediately": {
+          "type": "boolean"
+        },
+        "disable_alert": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CloseAllIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "close_all"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "comment": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "immediately": {
+          "type": "boolean"
+        },
+        "disable_alert": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CancelIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "order_id"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "cancel"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "CancelAllIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "cancel_all"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "RiskIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_id",
+        "schema_version",
+        "producer",
+        "producer_version",
+        "producer_commit",
+        "stack_id",
+        "created_at_utc_ms",
+        "serializer_id",
+        "content_hash_alg",
+        "content_hash",
+        "event_id",
+        "sequence",
+        "command_id",
+        "kind",
+        "run_id",
+        "strategy_id",
+        "series_id",
+        "instrument_id",
+        "timeframe",
+        "bar_index",
+        "bar_open_time_utc_ms",
+        "phase",
+        "recalc_iteration",
+        "semantic_profile",
+        "source_span",
+        "idempotency_key",
+        "risk_rule",
+        "risk_value",
+        "risk_unit",
+        "risk_scope"
+      ],
+      "properties": {
+        "schema_id": {
+          "const": "openpine.intent.v2"
+        },
+        "schema_version": {
+          "const": "2.2.0"
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "producer_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "stack_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "created_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serializer_id": {
+          "const": "openpine.canonical.json.v1"
+        },
+        "content_hash_alg": {
+          "const": "sha256"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "risk"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "series_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instrument_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "timeframe": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bar_open_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recalc_iteration": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_span": {
+          "$ref": "#/$defs/SourceProvenance"
+        },
+        "semantic_profile": {
+          "enum": [
+            "legacy_4x",
+            "strict_5x"
+          ]
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_value": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "risk_unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "risk_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alert_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
     }
   },
-  "allOf": [
+  "oneOf": [
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "entry"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "order_id",
-          "direction",
-          "qty"
-        ]
-      }
+      "$ref": "#/$defs/EntryIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "order"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "order_id",
-          "direction",
-          "qty"
-        ]
-      }
+      "$ref": "#/$defs/OrderIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "exit"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "order_id",
-          "from_entry"
-        ]
-      }
+      "$ref": "#/$defs/ExitIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "close"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "from_entry"
-        ]
-      }
+      "$ref": "#/$defs/CloseIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "close_all"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": []
-      }
+      "$ref": "#/$defs/CloseAllIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "cancel"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "order_id"
-        ]
-      }
+      "$ref": "#/$defs/CancelIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "cancel_all"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": []
-      }
+      "$ref": "#/$defs/CancelAllIntent"
     },
     {
-      "if": {
-        "properties": {
-          "kind": {
-            "const": "risk"
-          }
-        },
-        "required": [
-          "kind"
-        ]
-      },
-      "then": {
-        "required": [
-          "risk_rule",
-          "risk_value",
-          "risk_unit",
-          "risk_scope"
-        ]
-      }
+      "$ref": "#/$defs/RiskIntent"
     }
   ]
 }

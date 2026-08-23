@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.execution_context.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "run_id",
+    "strategy_id",
+    "session_id",
+    "stack_manifest_hash",
+    "wheel_identities",
+    "schema_hashes",
+    "generated_artifact_hash",
+    "source_hash",
+    "emitted_module_hash",
+    "data_snapshot_hash",
+    "series_id",
+    "instrument_id",
+    "exchange",
+    "market",
+    "symbol",
+    "timeframe",
+    "timezone",
+    "currency",
+    "mintick",
+    "pointvalue",
+    "session_policy",
+    "semantic_profile",
+    "finality_policy",
+    "warmup_policy",
+    "score_policy",
+    "end_policy",
+    "capabilities",
+    "producer_commits"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.execution_context.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "stack_id": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "strategy_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stack_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "wheel_identities": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/WheelIdentity"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "openpine-contracts"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "marketdata-provider"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "pinelib"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "pine2ast"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "ast2python"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "backtest_engine"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "optimizer"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "const": "openpine"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "schema_hashes": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\\.v[1-9][0-9]*$"
+      }
+    },
+    "generated_artifact_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "emitted_module_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "data_snapshot_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "series_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exchange": {
+      "type": "string",
+      "minLength": 1
+    },
+    "market": {
+      "type": "string",
+      "minLength": 1
+    },
+    "symbol": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timeframe": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mintick": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "pointvalue": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "session_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "semantic_profile": {
+      "enum": [
+        "legacy_4x",
+        "strict_5x"
+      ]
+    },
+    "finality_policy": {
+      "enum": [
+        "CLOSED_BAR_ONLY",
+        "ALLOW_OPEN"
+      ]
+    },
+    "warmup_policy": {
+      "enum": [
+        "CALC_ONLY",
+        "TRADE_THROUGH_UNSCORED",
+        "CALC_THEN_RESET_BROKER"
+      ]
+    },
+    "score_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "end_policy": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "producer_commits": {
+      "$ref": "#/$defs/ProducerCommits"
+    }
+  },
+  "$defs": {
+    "WheelIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "content_hash"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        }
+      }
+    },
+    "ProducerCommits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "openpine-contracts",
+        "pine2ast",
+        "ast2python",
+        "pinelib",
+        "marketdata-provider",
+        "backtest_engine",
+        "optimizer",
+        "openpine"
+      ],
+      "properties": {
+        "openpine-contracts": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "pine2ast": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "ast2python": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "pinelib": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "marketdata-provider": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "backtest_engine": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "optimizer": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        },
+        "openpine": {
+          "type": "string",
+          "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,500 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.broker_projection.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "run_id",
+    "series_id",
+    "instrument_id",
+    "bar_index",
+    "bar_open_time_utc_ms",
+    "recalc_iteration",
+    "position",
+    "orders",
+    "fills",
+    "open_trades",
+    "closed_trades",
+    "realized_pnl",
+    "unrealized_pnl",
+    "gross_profit",
+    "gross_loss",
+    "commission",
+    "winning_trades",
+    "losing_trades",
+    "even_trades",
+    "cash",
+    "equity",
+    "currency"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.broker_projection.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "stack_id": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "series_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instrument_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bar_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_open_time_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recalc_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "orders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Order"
+      }
+    },
+    "fills": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Fill"
+      }
+    },
+    "open_trades": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/OpenTrade"
+      }
+    },
+    "closed_trades": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ClosedTrade"
+      }
+    },
+    "realized_pnl": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "unrealized_pnl": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "gross_profit": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "gross_loss": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "commission": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "winning_trades": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "losing_trades": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "even_trades": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cash": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "equity": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "Position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direction",
+        "qty",
+        "avg_price",
+        "entry_name"
+      ],
+      "properties": {
+        "direction": {
+          "enum": [
+            "FLAT",
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "avg_price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entry_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Order": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order_id",
+        "entry_name",
+        "state",
+        "direction",
+        "order_type",
+        "qty",
+        "filled_qty",
+        "limit_price",
+        "stop_price",
+        "created_bar_index",
+        "updated_bar_index"
+      ],
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state": {
+          "enum": [
+            "PENDING",
+            "OPEN",
+            "PARTIALLY_FILLED",
+            "FILLED",
+            "CANCELED",
+            "REJECTED",
+            "EXPIRED"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "order_type": {
+          "enum": [
+            "MARKET",
+            "LIMIT",
+            "STOP",
+            "STOP_LIMIT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "filled_qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "limit_price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stop_price": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "updated_bar_index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Fill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fill_id",
+        "order_id",
+        "trade_id",
+        "direction",
+        "qty",
+        "price",
+        "commission",
+        "bar_index",
+        "occurred_at_utc_ms"
+      ],
+      "properties": {
+        "fill_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trade_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "price": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "commission": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "occurred_at_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "OpenTrade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_id",
+        "entry_name",
+        "direction",
+        "qty",
+        "entry_price",
+        "entry_bar_index",
+        "entry_time_utc_ms",
+        "unrealized_pnl"
+      ],
+      "properties": {
+        "trade_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "entry_price": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "entry_bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entry_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unrealized_pnl": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    },
+    "ClosedTrade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_id",
+        "entry_name",
+        "direction",
+        "qty",
+        "entry_price",
+        "entry_bar_index",
+        "entry_time_utc_ms",
+        "exit_price",
+        "exit_bar_index",
+        "exit_time_utc_ms",
+        "realized_pnl",
+        "commission"
+      ],
+      "properties": {
+        "trade_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "LONG",
+            "SHORT"
+          ]
+        },
+        "qty": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "entry_price": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "entry_bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entry_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exit_price": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "exit_bar_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exit_time_utc_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "realized_pnl": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        },
+        "commission": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+        }
+      }
+    }
+  }
+}

@@ -33,6 +33,10 @@ class SchemaValidatorUnavailableError(ContractError):
     code = "SCHEMA_VALIDATOR_UNAVAILABLE"
 
 
+class WorkerProtocolSemanticError(ContractError):
+    code = "WORKER_PROTOCOL_SEMANTIC_ERROR"
+
+
 class MoneyError(ContractError):
     code = "MONEY_ERROR"
 
