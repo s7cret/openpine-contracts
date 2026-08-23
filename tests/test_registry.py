@@ -27,6 +27,16 @@ def _envelope(schema_id: str, extra: dict[str, object]) -> dict[str, object]:
         "content_hash_alg": "sha256",
         "content_hash": "sha256:" + ("ab" * 32),
     }
+    if schema_id in {"openpine.marketdata.v2", "openpine.marketdata.bar.v2"}:
+        payload.update(
+            {
+                "schema_version": "2.1.0",
+                "producer": "marketdata-provider",
+                "producer_version": "5.0.0-rc.4",
+                "producer_commit": "a" * 40,
+                "stack_id": "sha256:" + ("b" * 64),
+            }
+        )
     payload.update(extra)
     payload["content_hash"] = content_hash(payload, schema_id=schema_id)
     return payload
@@ -89,8 +99,10 @@ def test_validate_event_and_bar() -> None:
             "revision_state": "ORIGINAL",
             "revision": 0,
             "provider": "binance",
+            "provider_revision": {"known": True, "revision": "binance-r1"},
             "snapshot_id": "snap-1",
             "bar_content_hash": "sha256:" + ("ef" * 32),
+            "superseded_bar_hash": None,
         },
     )
     validate_payload("openpine.marketdata.bar.v2", bar)

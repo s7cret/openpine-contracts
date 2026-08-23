@@ -72,6 +72,61 @@ def _verify_nested_hashes(kind: str, body: Mapping[str, object], index: int) -> 
                     )
 
 
+def _semver_from_wheel_version(value: object) -> object:
+    if not isinstance(value, str) or "rc" not in value or "-rc." in value:
+        return value
+    base, marker, rc = value.partition("rc")
+    if marker and base and rc.isdigit():
+        return f"{base}-rc.{rc}"
+    return value
+
+
+def _component_identity(
+    execution_context: Mapping[str, object], component: str
+) -> tuple[object, object]:
+    commits = execution_context.get("producer_commits")
+    expected_commit = commits.get(component) if isinstance(commits, Mapping) else None
+    expected_version: object = None
+    wheels = execution_context.get("wheel_identities")
+    if isinstance(wheels, list):
+        for wheel in wheels:
+            if isinstance(wheel, Mapping) and wheel.get("name") == component:
+                expected_version = _semver_from_wheel_version(wheel.get("version"))
+                break
+    return expected_version, expected_commit
+
+
+def _validate_component_provenance(
+    payload: Mapping[str, object],
+    *,
+    execution_context: Mapping[str, object],
+    component: str,
+    reason: str,
+    message: str,
+    index: int,
+    item_index: int | None = None,
+) -> None:
+    expected_version, expected_commit = _component_identity(execution_context, component)
+    expectations = {
+        "producer": component,
+        "producer_version": expected_version,
+        "producer_commit": expected_commit,
+        "stack_id": execution_context.get("stack_manifest_hash"),
+    }
+    for field, expected in expectations.items():
+        actual = payload.get(field)
+        if expected is None or actual != expected:
+            details: dict[str, object] = {
+                "index": index,
+                "field": field,
+                "expected": expected,
+                "actual": actual,
+            }
+            if item_index is not None:
+                details["item_index"] = item_index
+            _fail(reason, message, **details)
+
+
 def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) -> None:
     """Validate one complete, identity-stable worker protocol sequence.
 
@@ -85,7 +140,16 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
 
     first = messages[0]
     baseline = {
-        field: first.get(field) for field in ("session_id", "run_id", "stack_id", "correlation_id")
+        field: first.get(field)
+        for field in (
+            "session_id",
+            "run_id",
+            "stack_id",
+            "correlation_id",
+            "producer",
+            "producer_version",
+            "producer_commit",
+        )
     }
     previous_kind: str | None = None
     execution_context: Mapping[str, object] | None = None
@@ -193,6 +257,16 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                                 expected=expected,
                                 actual=admitted_context.get(field),
                             )
+                    _validate_component_provenance(
+                        baseline,
+                        execution_context=admitted_context,
+                        component="openpine",
+                        reason="ROOT_PRODUCER_IDENTITY_MISMATCH",
+                        message=(
+                            "worker protocol producer identity differs from the admitted stack"
+                        ),
+                        index=index,
+                    )
                     execution_context = admitted_context
             elif kind == "BAR_BEGIN":
                 bar = body.get("bar")
@@ -231,6 +305,17 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                                 expected=expected,
                                 actual=bar.get(field),
                             )
+                    if execution_context is not None:
+                        _validate_component_provenance(
+                            bar,
+                            execution_context=execution_context,
+                            component="marketdata-provider",
+                            reason="BAR_PROVENANCE_MISMATCH",
+                            message=(
+                                "BAR_BEGIN canonical bar provenance differs from the admitted stack"
+                            ),
+                            index=index,
+                        )
                 if isinstance(projection, Mapping):
                     projection_expectations = {
                         "run_id": baseline["run_id"],
@@ -254,6 +339,17 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                                 expected=expected,
                                 actual=projection.get(field),
                             )
+                    if execution_context is not None:
+                        _validate_component_provenance(
+                            projection,
+                            execution_context=execution_context,
+                            component="backtest_engine",
+                            reason="PROJECTION_PROVENANCE_MISMATCH",
+                            message=(
+                                "broker projection provenance differs from the admitted stack"
+                            ),
+                            index=index,
+                        )
             elif kind in {"INTENT_BATCH", "BROKER_EVENT_BATCH", "RECALC_RESULT", "BAR_COMMIT"}:
                 if current_bar is None or any(
                     body.get(field) != current_bar[field]
@@ -292,6 +388,47 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                                         expected=expected,
                                         actual=intent.get(field),
                                     )
+                            _validate_component_provenance(
+                                intent,
+                                execution_context=execution_context,
+                                component="pinelib",
+                                reason="INTENT_PROVENANCE_MISMATCH",
+                                message="intent provenance differs from the admitted stack",
+                                index=index,
+                                item_index=item_index,
+                            )
+                            source_span = intent.get("source_span")
+                            if (
+                                isinstance(source_span, Mapping)
+                                and source_span.get("known") is True
+                                and source_span.get("source_hash")
+                                != execution_context.get("source_hash")
+                            ):
+                                _fail(
+                                    "INTENT_PROVENANCE_MISMATCH",
+                                    "known intent source differs from the admitted source",
+                                    index=index,
+                                    item_index=item_index,
+                                    field="source_hash",
+                                    expected=execution_context.get("source_hash"),
+                                    actual=source_span.get("source_hash"),
+                                )
+                if kind == "BROKER_EVENT_BATCH" and execution_context is not None:
+                    broker_events = body.get("broker_events")
+                    if isinstance(broker_events, list):
+                        for item_index, broker_event in enumerate(broker_events):
+                            if isinstance(broker_event, Mapping):
+                                _validate_component_provenance(
+                                    broker_event,
+                                    execution_context=execution_context,
+                                    component="backtest_engine",
+                                    reason="BROKER_EVENT_PROVENANCE_MISMATCH",
+                                    message=(
+                                        "broker event provenance differs from the admitted stack"
+                                    ),
+                                    index=index,
+                                    item_index=item_index,
+                                )
                 if kind == "BAR_COMMIT":
                     last_bar_commit_sequence = sequence
             elif kind == "RECALC_REQUEST":

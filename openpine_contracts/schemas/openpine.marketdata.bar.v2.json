@@ -28,16 +28,17 @@
     "revision_state",
     "revision",
     "provider",
+    "provider_revision",
     "snapshot_id",
-    "bar_content_hash"
+    "bar_content_hash",
+    "superseded_bar_hash"
   ],
   "properties": {
     "schema_id": {
       "const": "openpine.marketdata.bar.v2"
     },
     "schema_version": {
-      "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+      "const": "2.1.0"
     },
     "producer": {
       "type": "string",
@@ -49,11 +50,11 @@
     },
     "producer_commit": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
     },
     "stack_id": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "created_at_utc_ms": {
       "type": "integer",
@@ -67,7 +68,7 @@
     },
     "content_hash": {
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "series_id": {
       "type": "string",
@@ -145,9 +146,40 @@
       "minLength": 1
     },
     "provider_revision": {
-      "type": [
-        "string",
-        "null"
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "known",
+            "revision"
+          ],
+          "properties": {
+            "known": {
+              "const": true
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "known",
+            "revision"
+          ],
+          "properties": {
+            "known": {
+              "const": false
+            },
+            "revision": {
+              "type": "null"
+            }
+          }
+        }
       ]
     },
     "observed_at_utc_ms": {
@@ -170,13 +202,69 @@
     },
     "bar_content_hash": {
       "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
     },
     "superseded_bar_hash": {
-      "type": [
-        "string",
-        "null"
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
       ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "revision_state": {
+            "const": "ORIGINAL"
+          }
+        },
+        "required": [
+          "revision_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "revision": {
+            "const": 0
+          },
+          "superseded_bar_hash": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revision_state": {
+            "enum": [
+              "CORRECTED",
+              "REVOKED"
+            ]
+          }
+        },
+        "required": [
+          "revision_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "superseded_bar_hash": {
+            "type": "string",
+            "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  ]
 }

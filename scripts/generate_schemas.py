@@ -499,6 +499,24 @@ def main() -> None:
         ),
     )
 
+    provider_revision_identity = {
+        "oneOf": [
+            strict_object(
+                ["known", "revision"],
+                {
+                    "known": {"const": True},
+                    "revision": NONEMPTY_STRING,
+                },
+            ),
+            strict_object(
+                ["known", "revision"],
+                {
+                    "known": {"const": False},
+                    "revision": {"type": "null"},
+                },
+            ),
+        ]
+    }
     bar_props = {
         "series_id": {"type": "string", "minLength": 1},
         "instrument_id": {"type": "string", "minLength": 1},
@@ -516,12 +534,12 @@ def main() -> None:
         "revision": {"type": "integer", "minimum": 0},
         "provider": {"type": "string", "minLength": 1},
         "snapshot_id": {"type": "string", "minLength": 1},
-        "provider_revision": {"type": ["string", "null"]},
+        "provider_revision": provider_revision_identity,
         "observed_at_utc_ms": {"type": ["integer", "null"]},
         "ingested_at_utc_ms": {"type": ["integer", "null"]},
         "session_id": {"type": ["string", "null"]},
-        "bar_content_hash": SHA,
-        "superseded_bar_hash": {"type": ["string", "null"]},
+        "bar_content_hash": NONZERO_SHA,
+        "superseded_bar_hash": {"anyOf": [NONZERO_SHA, {"type": "null"}]},
     }
     bar_required = [
         "series_id",
@@ -538,21 +556,57 @@ def main() -> None:
         "revision_state",
         "revision",
         "provider",
+        "provider_revision",
         "snapshot_id",
         "bar_content_hash",
+        "superseded_bar_hash",
+    ]
+    bar_revision_lineage = [
+        {
+            "if": {
+                "properties": {"revision_state": {"const": "ORIGINAL"}},
+                "required": ["revision_state"],
+            },
+            "then": {
+                "properties": {
+                    "revision": {"const": 0},
+                    "superseded_bar_hash": {"type": "null"},
+                }
+            },
+        },
+        {
+            "if": {
+                "properties": {"revision_state": {"enum": ["CORRECTED", "REVOKED"]}},
+                "required": ["revision_state"],
+            },
+            "then": {
+                "properties": {
+                    "revision": {"type": "integer", "minimum": 1},
+                    "superseded_bar_hash": NONZERO_SHA,
+                }
+            },
+        },
     ]
 
     write(
         "openpine.marketdata.bar.v2.json",
-        schema("openpine.marketdata.bar.v2", required=bar_required, properties=bar_props),
+        rc4_schema(
+            "openpine.marketdata.bar.v2",
+            "2.1.0",
+            required=bar_required,
+            properties={"producer_commit": NONZERO_GIT_SHA, **bar_props},
+            extra={"allOf": bar_revision_lineage},
+        ),
     )
 
     write(
         "openpine.marketdata.v2.json",
-        schema(
+        rc4_schema(
             "openpine.marketdata.v2",
+            "2.1.0",
             required=["kind", "body"],
             properties={
+                "producer_commit": NONZERO_GIT_SHA,
                 "kind": {
                     "enum": [
                         "instrument",
@@ -576,6 +630,7 @@ def main() -> None:
                     "additionalProperties": False,
                     "required": bar_required,
                     "properties": bar_props,
+                    "allOf": bar_revision_lineage,
                 },
                 "DataQuery": {
                     "type": "object",
@@ -607,17 +662,30 @@ def main() -> None:
                         "query",
                         "bar_count",
                         "series_hash",
+                        "coverage",
+                        "gaps",
+                        "conflicts",
+                        "provider_revision",
                         "created_at_utc_ms",
                     ],
                     "properties": {
                         "snapshot_id": {"type": "string"},
                         "query": {"$ref": "#/$defs/DataQuery"},
                         "bar_count": {"type": "integer", "minimum": 0},
-                        "series_hash": SHA,
-                        "coverage": {"type": "array", "items": {"type": "object"}},
-                        "gaps": {"type": "array", "items": {"type": "object"}},
-                        "conflicts": {"type": "array", "items": {"type": "object"}},
-                        "provider_revision": {"type": ["string", "null"]},
+                        "series_hash": NONZERO_SHA,
+                        "coverage": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Coverage"},
+                        },
+                        "gaps": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Gap"},
+                        },
+                        "conflicts": {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Conflict"},
+                        },
+                        "provider_revision": provider_revision_identity,
                         "created_at_utc_ms": {"type": "integer", "minimum": 0},
                     },
                 },

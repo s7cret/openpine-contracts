@@ -62,7 +62,7 @@ def _assert_invalid(schema_id: str, payload: dict[str, Any]) -> None:
 def _source_known() -> dict[str, Any]:
     return {
         "known": True,
-        "source_hash": HASH_B,
+        "source_hash": HASH_C,
         "start_offset": 10,
         "end_offset": 20,
         "start_line": 2,
@@ -119,6 +119,10 @@ def _intent(kind: str, **overrides: Any) -> dict[str, Any]:
     payload = _envelope("openpine.intent.v2", "2.2.0")
     payload.update(
         {
+            "producer": "pinelib",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_D,
+            "stack_id": HASH_D,
             "event_id": "evt-1",
             "sequence": 0,
             "command_id": "cmd-1",
@@ -198,6 +202,10 @@ def _broker_projection() -> dict[str, Any]:
     payload = _envelope("openpine.broker_projection.v1", "1.0.0")
     payload.update(
         {
+            "producer": "backtest_engine",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_F,
+            "stack_id": HASH_D,
             "run_id": "run-1",
             "series_id": "binance:BTCUSDT:15m",
             "instrument_id": "binance:BTCUSDT",
@@ -372,9 +380,13 @@ def _trial_lifecycle() -> dict[str, Any]:
 
 
 def _canonical_bar() -> dict[str, Any]:
-    payload = _envelope("openpine.marketdata.bar.v2", "2.0.0")
+    payload = _envelope("openpine.marketdata.bar.v2", "2.1.0")
     payload.update(
         {
+            "producer": "marketdata-provider",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_E,
+            "stack_id": HASH_D,
             "series_id": "binance:BTCUSDT:15m",
             "instrument_id": "binance:BTCUSDT",
             "timeframe": "15m",
@@ -389,17 +401,104 @@ def _canonical_bar() -> dict[str, Any]:
             "revision_state": "ORIGINAL",
             "revision": 0,
             "provider": "binance",
+            "provider_revision": _provider_revision(),
             "snapshot_id": "snapshot-1",
             "bar_content_hash": HASH_A,
+            "superseded_bar_hash": None,
         }
     )
     return contracts.seal_content_hash(payload, schema_id="openpine.marketdata.bar.v2")
+
+
+_MARKETDATA_ENVELOPE_FIELDS = {
+    "schema_id",
+    "schema_version",
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+}
+
+
+def _canonical_bar_body() -> dict[str, Any]:
+    return {
+        key: deepcopy(value)
+        for key, value in _canonical_bar().items()
+        if key not in _MARKETDATA_ENVELOPE_FIELDS
+    }
+
+
+def _legacy_data_snapshot() -> dict[str, Any]:
+    return {
+        "snapshot_id": "snapshot-1",
+        "query": {
+            "instrument_id": "binance:BTCUSDT",
+            "timeframe": "15m",
+            "start_utc_ms": 6_300_000,
+            "end_utc_ms": 7_199_999,
+            "finality_policy": "CLOSED_BAR_ONLY",
+        },
+        "bar_count": 1,
+        "series_hash": HASH_A,
+        "coverage": [],
+        "gaps": [],
+        "conflicts": [],
+        "provider_revision": None,
+        "created_at_utc_ms": 7_200_000,
+    }
+
+
+def _marketdata_message(kind: str, body: dict[str, Any]) -> dict[str, Any]:
+    payload = _envelope("openpine.marketdata.v2", "2.1.0")
+    payload.update(
+        {
+            "producer": "marketdata-provider",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_E,
+            "stack_id": HASH_D,
+            "kind": kind,
+            "body": deepcopy(body),
+        }
+    )
+    return contracts.seal_content_hash(payload, schema_id="openpine.marketdata.v2")
+
+
+def _provider_revision(known: bool = True) -> dict[str, Any]:
+    return {"known": known, "revision": "binance-42" if known else None}
+
+
+def _rc4_data_snapshot() -> dict[str, Any]:
+    snapshot = _legacy_data_snapshot()
+    snapshot.update(
+        {
+            "coverage": [
+                {
+                    "instrument_id": "binance:BTCUSDT",
+                    "timeframe": "15m",
+                    "start_utc_ms": 6_300_000,
+                    "end_utc_ms": 7_199_999,
+                }
+            ],
+            "gaps": [],
+            "conflicts": [],
+            "provider_revision": _provider_revision(),
+        }
+    )
+    return snapshot
 
 
 def _broker_event() -> dict[str, Any]:
     payload = _envelope("openpine.broker.v2", "2.0.0")
     payload.update(
         {
+            "producer": "backtest_engine",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_F,
+            "stack_id": HASH_D,
             "kind": "event",
             "body": {
                 "event_kind": "fill",
@@ -511,6 +610,10 @@ def _worker_message(
     payload = _envelope("openpine.worker.protocol.v2", "2.1.0")
     payload.update(
         {
+            "producer": "openpine",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_1,
+            "stack_id": HASH_D,
             "session_id": "session-1",
             "run_id": "run-1",
             "sequence": sequence,
@@ -822,6 +925,171 @@ def test_intent_source_provenance_is_exact_or_explicitly_unknown() -> None:
     _assert_invalid("openpine.intent.v2", _intent("close_all", source_span=reversed_span))
 
 
+@pytest.mark.parametrize(
+    ("target", "field", "value"),
+    [
+        ("bar_alias", "producer_commit", "deadbeef"),
+        ("bar_alias", "producer_commit", "0" * 40),
+        ("bar_alias", "stack_id", "stack-placeholder"),
+        ("bar_alias", "stack_id", "sha256:" + ("0" * 64)),
+        ("bar_alias", "content_hash", "sha256:abc"),
+        ("bar_alias", "content_hash", "sha256:" + ("0" * 64)),
+        ("bar_alias", "bar_content_hash", "sha256:abc"),
+        ("bar_alias", "bar_content_hash", "sha256:" + ("0" * 64)),
+        ("bar_family", "producer_commit", "deadbeef"),
+        ("bar_family", "stack_id", "stack-placeholder"),
+        ("bar_family", "content_hash", "sha256:" + ("0" * 64)),
+        ("bar_family", "bar_content_hash", "sha256:" + ("0" * 64)),
+        ("snapshot", "producer_commit", "deadbeef"),
+        ("snapshot", "stack_id", "sha256:" + ("0" * 64)),
+        ("snapshot", "content_hash", "sha256:" + ("0" * 64)),
+        ("snapshot", "series_hash", "sha256:" + ("0" * 64)),
+    ],
+)
+def test_marketdata_rc4_rejects_placeholder_identity_and_hashes(
+    target: str, field: str, value: str
+) -> None:
+    if target == "bar_alias":
+        schema_id = "openpine.marketdata.bar.v2"
+        payload = _canonical_bar()
+        payload[field] = value
+    elif target == "bar_family":
+        schema_id = "openpine.marketdata.v2"
+        payload = _marketdata_message("bar", _canonical_bar_body())
+        if field == "bar_content_hash":
+            body = payload["body"]
+            assert isinstance(body, dict)
+            body[field] = value
+        else:
+            payload[field] = value
+    else:
+        schema_id = "openpine.marketdata.v2"
+        payload = _marketdata_message("snapshot", _rc4_data_snapshot())
+        if field == "series_hash":
+            body = payload["body"]
+            assert isinstance(body, dict)
+            body[field] = value
+        else:
+            payload[field] = value
+
+    _assert_invalid(schema_id, payload)
+
+
+@pytest.mark.parametrize("target", ["bar_alias", "bar_family", "snapshot"])
+@pytest.mark.parametrize("mode", ["omitted", "legacy_string"])
+def test_marketdata_provider_revision_must_be_explicitly_discriminated(
+    target: str, mode: str
+) -> None:
+    if target == "bar_alias":
+        schema_id = "openpine.marketdata.bar.v2"
+        payload = _canonical_bar()
+        owner = payload
+    elif target == "bar_family":
+        schema_id = "openpine.marketdata.v2"
+        payload = _marketdata_message("bar", _canonical_bar_body())
+        owner = payload["body"]
+        assert isinstance(owner, dict)
+    else:
+        schema_id = "openpine.marketdata.v2"
+        payload = _marketdata_message("snapshot", _rc4_data_snapshot())
+        owner = payload["body"]
+        assert isinstance(owner, dict)
+
+    if mode == "omitted":
+        owner.pop("provider_revision", None)
+    else:
+        owner["provider_revision"] = "binance-42"
+    _assert_invalid(schema_id, payload)
+
+
+@pytest.mark.parametrize("known", [True, False])
+def test_marketdata_provider_revision_accepts_only_known_or_unknown(known: bool) -> None:
+    provider_revision = _provider_revision(known)
+
+    bar = _canonical_bar()
+    bar["schema_version"] = "2.1.0"
+    bar["provider_revision"] = provider_revision
+    bar["superseded_bar_hash"] = None
+    validate_payload("openpine.marketdata.bar.v2", bar)
+
+    bar_body = _canonical_bar_body()
+    bar_body["provider_revision"] = provider_revision
+    bar_body["superseded_bar_hash"] = None
+    validate_payload("openpine.marketdata.v2", _marketdata_message("bar", bar_body))
+
+    snapshot = _rc4_data_snapshot()
+    snapshot["provider_revision"] = provider_revision
+    validate_payload("openpine.marketdata.v2", _marketdata_message("snapshot", snapshot))
+
+
+@pytest.mark.parametrize("field", ["coverage", "gaps", "conflicts"])
+def test_data_snapshot_requires_typed_provenance_collections(field: str) -> None:
+    snapshot = _rc4_data_snapshot()
+    snapshot[field] = [{"unexpected": True}]
+    _assert_invalid("openpine.marketdata.v2", _marketdata_message("snapshot", snapshot))
+
+
+@pytest.mark.parametrize("field", ["coverage", "gaps", "conflicts"])
+def test_data_snapshot_requires_all_provenance_collections(field: str) -> None:
+    snapshot = _rc4_data_snapshot()
+    snapshot.pop(field)
+    _assert_invalid("openpine.marketdata.v2", _marketdata_message("snapshot", snapshot))
+
+
+def test_data_snapshot_accepts_typed_coverage_gap_and_conflict_refs() -> None:
+    snapshot = _rc4_data_snapshot()
+    snapshot["gaps"] = [{"start_utc_ms": 6_750_000, "end_utc_ms": 6_759_999, "reason": None}]
+    snapshot["conflicts"] = [
+        {
+            "instrument_id": "binance:BTCUSDT",
+            "open_time_utc_ms": 6_300_000,
+            "left_hash": HASH_A,
+            "right_hash": HASH_B,
+        }
+    ]
+    validate_payload("openpine.marketdata.v2", _marketdata_message("snapshot", snapshot))
+
+
+@pytest.mark.parametrize(
+    ("revision_state", "revision", "superseded_bar_hash"),
+    [
+        ("ORIGINAL", 1, None),
+        ("ORIGINAL", 0, HASH_B),
+        ("CORRECTED", 0, HASH_B),
+        ("CORRECTED", 1, None),
+        ("REVOKED", 0, HASH_B),
+        ("REVOKED", 1, None),
+    ],
+)
+def test_canonical_bar_rejects_invalid_revision_lineage(
+    revision_state: str, revision: int, superseded_bar_hash: str | None
+) -> None:
+    bar = _canonical_bar()
+    bar.update(
+        {
+            "revision_state": revision_state,
+            "revision": revision,
+            "superseded_bar_hash": superseded_bar_hash,
+        }
+    )
+    _assert_invalid("openpine.marketdata.bar.v2", bar)
+
+
+@pytest.mark.parametrize("revision_state", ["CORRECTED", "REVOKED"])
+def test_canonical_bar_accepts_explicit_revision_lineage(revision_state: str) -> None:
+    bar = _canonical_bar()
+    bar.update(
+        {
+            "schema_version": "2.1.0",
+            "provider_revision": _provider_revision(),
+            "revision_state": revision_state,
+            "revision": 1,
+            "superseded_bar_hash": HASH_B,
+        }
+    )
+    validate_payload("openpine.marketdata.bar.v2", bar)
+
+
 @pytest.mark.parametrize(("kind", "body"), WORKER_BODIES.items())
 def test_worker_v2_1_positive_kind_fixtures_validate(kind: str, body: dict[str, Any]) -> None:
     validate_payload("openpine.worker.protocol.v2", _worker_message(kind, body=body))
@@ -879,6 +1147,9 @@ def test_worker_protocol_semantic_sequence_accepts_canonical_state_machine() -> 
         (4, "session_id", "other-session", "SESSION_ID_MISMATCH"),
         (4, "run_id", "other-run", "RUN_ID_MISMATCH"),
         (4, "stack_id", HASH_C, "STACK_ID_MISMATCH"),
+        (4, "producer", "other-producer", "PRODUCER_MISMATCH"),
+        (4, "producer_version", "5.0.1", "PRODUCER_VERSION_MISMATCH"),
+        (4, "producer_commit", COMMIT_A, "PRODUCER_COMMIT_MISMATCH"),
         (4, "correlation_id", "other-correlation", "CORRELATION_ID_MISMATCH"),
         (4, "causation_id", "other-causation", "CAUSATION_ID_MISMATCH"),
     ],
@@ -895,6 +1166,135 @@ def test_worker_protocol_semantic_sequence_has_stable_identity_errors(
         contracts.validate_worker_protocol_sequence(messages)
     assert caught.value.code == "WORKER_PROTOCOL_SEMANTIC_ERROR"
     assert caught.value.details["reason"] == reason
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("producer", "unknown-worker"),
+        ("producer_version", "5.0.1"),
+        ("producer_commit", COMMIT_A),
+    ],
+)
+def test_worker_protocol_binds_root_producer_identity_to_execution_context(
+    field: str, value: str
+) -> None:
+    messages = _valid_worker_sequence()
+    for index, message in enumerate(messages):
+        message[field] = value
+        messages[index] = contracts.seal_content_hash(
+            message, schema_id="openpine.worker.protocol.v2"
+        )
+
+    with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
+        contracts.validate_worker_protocol_sequence(messages)
+
+    assert caught.value.details["reason"] == "ROOT_PRODUCER_IDENTITY_MISMATCH"
+    assert caught.value.details["field"] == field
+
+
+@pytest.mark.parametrize(
+    ("target", "field", "value", "reason"),
+    [
+        ("intent", "producer", "other-producer", "INTENT_PROVENANCE_MISMATCH"),
+        ("intent", "producer_commit", COMMIT_A, "INTENT_PROVENANCE_MISMATCH"),
+        ("intent", "stack_id", HASH_A, "INTENT_PROVENANCE_MISMATCH"),
+        ("intent", "source_hash", HASH_A, "INTENT_PROVENANCE_MISMATCH"),
+        ("bar", "producer", "other-producer", "BAR_PROVENANCE_MISMATCH"),
+        ("bar", "producer_commit", COMMIT_A, "BAR_PROVENANCE_MISMATCH"),
+        ("bar", "stack_id", HASH_A, "BAR_PROVENANCE_MISMATCH"),
+        (
+            "broker_projection",
+            "producer",
+            "other-producer",
+            "PROJECTION_PROVENANCE_MISMATCH",
+        ),
+        (
+            "broker_projection",
+            "producer_commit",
+            COMMIT_A,
+            "PROJECTION_PROVENANCE_MISMATCH",
+        ),
+        (
+            "broker_projection",
+            "stack_id",
+            HASH_A,
+            "PROJECTION_PROVENANCE_MISMATCH",
+        ),
+        (
+            "broker_event",
+            "producer",
+            "other-producer",
+            "BROKER_EVENT_PROVENANCE_MISMATCH",
+        ),
+        (
+            "broker_event",
+            "producer_commit",
+            COMMIT_A,
+            "BROKER_EVENT_PROVENANCE_MISMATCH",
+        ),
+        (
+            "broker_event",
+            "stack_id",
+            HASH_A,
+            "BROKER_EVENT_PROVENANCE_MISMATCH",
+        ),
+    ],
+)
+def test_worker_protocol_rejects_nested_provenance_drift(
+    target: str, field: str, value: str, reason: str
+) -> None:
+    messages = _valid_worker_sequence()
+    if target == "intent":
+        message_index = 4
+        body = messages[message_index]["body"]
+        assert isinstance(body, dict)
+        items = body["intents"]
+        assert isinstance(items, list) and items and isinstance(items[0], dict)
+        nested = items[0]
+        if field == "source_hash":
+            source_span = nested["source_span"]
+            assert isinstance(source_span, dict)
+            source_span["source_hash"] = value
+        else:
+            nested[field] = value
+        items[0] = contracts.seal_content_hash(nested, schema_id="openpine.intent.v2")
+    elif target == "bar":
+        message_index = 3
+        body = messages[message_index]["body"]
+        assert isinstance(body, dict)
+        nested = body["bar"]
+        assert isinstance(nested, dict)
+        nested[field] = value
+        body["bar"] = contracts.seal_content_hash(nested, schema_id="openpine.marketdata.bar.v2")
+    elif target == "broker_projection":
+        message_index = 3
+        body = messages[message_index]["body"]
+        assert isinstance(body, dict)
+        nested = body["broker_projection"]
+        assert isinstance(nested, dict)
+        nested[field] = value
+        body["broker_projection"] = contracts.seal_content_hash(
+            nested, schema_id="openpine.broker_projection.v1"
+        )
+    else:
+        message_index = 5
+        body = messages[message_index]["body"]
+        assert isinstance(body, dict)
+        items = body["broker_events"]
+        assert isinstance(items, list) and items and isinstance(items[0], dict)
+        nested = items[0]
+        nested[field] = value
+        items[0] = contracts.seal_content_hash(nested, schema_id="openpine.broker.v2")
+
+    messages[message_index] = contracts.seal_content_hash(
+        messages[message_index], schema_id="openpine.worker.protocol.v2"
+    )
+    with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
+        contracts.validate_worker_protocol_sequence(messages)
+
+    assert caught.value.details["reason"] == reason
+    assert caught.value.details["field"] == field
 
 
 def test_worker_protocol_semantic_sequence_rejects_forbidden_transition() -> None:
