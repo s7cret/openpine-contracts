@@ -14,6 +14,8 @@
     "serializer_id",
     "content_hash_alg",
     "content_hash",
+    "message_id",
+    "sender_role",
     "session_id",
     "run_id",
     "sequence",
@@ -27,7 +29,7 @@
       "const": "openpine.worker.protocol.v2"
     },
     "schema_version": {
-      "const": "2.1.0"
+      "const": "2.2.0"
     },
     "producer": {
       "type": "string",
@@ -58,6 +60,17 @@
     "content_hash": {
       "type": "string",
       "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "message_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sender_role": {
+      "enum": [
+        "parent",
+        "worker",
+        "engine"
+      ]
     },
     "session_id": {
       "type": "string",
@@ -117,7 +130,7 @@
           "minLength": 1
         },
         "protocol_version": {
-          "const": "2.1.0"
+          "const": "2.2.0"
         },
         "capabilities": {
           "type": "array",
@@ -345,6 +358,7 @@
         "run_id",
         "bar_index",
         "recalc_iteration",
+        "intent_batch_message_id",
         "intent_batch_hash"
       ],
       "properties": {
@@ -360,6 +374,10 @@
           "type": "integer",
           "minimum": 1
         },
+        "intent_batch_message_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "intent_batch_hash": {
           "type": "string",
           "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
@@ -374,7 +392,9 @@
         "bar_index",
         "recalc_iteration",
         "state_hash",
-        "broker_projection_hash"
+        "broker_projection_hash",
+        "state_ref",
+        "broker_projection_ref"
       ],
       "properties": {
         "run_id": {
@@ -396,6 +416,12 @@
         "broker_projection_hash": {
           "type": "string",
           "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "state_ref": {
+          "$ref": "#/$defs/SealedArtifactRef"
+        },
+        "broker_projection_ref": {
+          "$ref": "#/$defs/SealedArtifactRef"
         }
       }
     },
@@ -406,7 +432,8 @@
         "run_id",
         "checkpoint_id",
         "checkpoint_hash",
-        "committed_sequence"
+        "committed_sequence",
+        "checkpoint_ref"
       ],
       "properties": {
         "run_id": {
@@ -424,6 +451,9 @@
         "committed_sequence": {
           "type": "integer",
           "minimum": 0
+        },
+        "checkpoint_ref": {
+          "$ref": "openpine.checkpoint.proof.v1"
         }
       }
     },
@@ -452,6 +482,9 @@
         "committed_sequence": {
           "type": "integer",
           "minimum": 0
+        },
+        "external_checkpoint_proof": {
+          "$ref": "openpine.checkpoint.proof.v1"
         }
       }
     },
@@ -462,7 +495,9 @@
         "run_id",
         "final_sequence",
         "final_state_hash",
-        "broker_projection_hash"
+        "broker_projection_hash",
+        "last_commit_message_id",
+        "last_committed_sequence"
       ],
       "properties": {
         "run_id": {
@@ -480,6 +515,50 @@
         "broker_projection_hash": {
           "type": "string",
           "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "last_commit_message_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "last_committed_sequence": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "SealedArtifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_hash",
+        "schema_id",
+        "codec",
+        "size_bytes",
+        "uri"
+      ],
+      "properties": {
+        "artifact_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "schema_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "codec": {
+          "enum": [
+            "json",
+            "msgpack",
+            "binary"
+          ]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "uri": {
+          "type": "string",
+          "pattern": "^(?:https?|s3|file)://.+$"
         }
       }
     },

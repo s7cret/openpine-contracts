@@ -41,7 +41,10 @@
     "score_policy",
     "end_policy",
     "capabilities",
-    "producer_commits"
+    "producer_commits",
+    "policy_registry_version",
+    "schema_registry_version",
+    "capability_registry_version"
   ],
   "properties": {
     "schema_id": {
@@ -229,13 +232,35 @@
     },
     "schema_hashes": {
       "type": "object",
-      "minProperties": 1,
-      "additionalProperties": {
-        "type": "string",
-        "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
-      },
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\\.v[1-9][0-9]*$"
+      "additionalProperties": false,
+      "required": [
+        "openpine.execution_context.v1",
+        "openpine.worker.protocol.v2",
+        "openpine.checkpoint.v1",
+        "openpine.checkpoint.proof.v1",
+        "openpine.intent.v2"
+      ],
+      "properties": {
+        "openpine.execution_context.v1": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "openpine.worker.protocol.v2": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "openpine.checkpoint.v1": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "openpine.checkpoint.proof.v1": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "openpine.intent.v2": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        }
       }
     },
     "generated_artifact_hash": {
@@ -318,23 +343,55 @@
       ]
     },
     "score_policy": {
-      "type": "string",
-      "minLength": 1
+      "enum": [
+        "ALL_BARS",
+        "AFTER_WARMUP"
+      ]
     },
     "end_policy": {
-      "type": "string",
-      "minLength": 1
+      "enum": [
+        "LIQUIDATE_ON_LAST_BAR",
+        "PRESERVE_OPEN_POSITIONS"
+      ]
     },
     "capabilities": {
       "type": "array",
+      "minItems": 2,
       "uniqueItems": true,
       "items": {
-        "type": "string",
-        "minLength": 1
-      }
+        "enum": [
+          "closed_bar",
+          "deterministic_clock",
+          "checkpoint_v1",
+          "sealed_artifact_refs"
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {
+            "const": "closed_bar"
+          },
+          "minContains": 1
+        },
+        {
+          "contains": {
+            "const": "deterministic_clock"
+          },
+          "minContains": 1
+        }
+      ]
     },
     "producer_commits": {
       "$ref": "#/$defs/ProducerCommits"
+    },
+    "policy_registry_version": {
+      "const": "openpine.policies.rc4.v1"
+    },
+    "schema_registry_version": {
+      "const": "openpine.schemas.rc4.v1"
+    },
+    "capability_registry_version": {
+      "const": "openpine.capabilities.rc4.v1"
     }
   },
   "$defs": {

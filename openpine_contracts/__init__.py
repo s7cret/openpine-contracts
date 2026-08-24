@@ -32,7 +32,7 @@ from .models import (
 from .money import DECIMAL_POLICY, Money, decimal_string, unsafe_decimal_from_float
 from .registry import get_schema, list_schema_ids, schema_bytes, schema_hash
 from .validate import validate_payload
-from .worker_protocol import validate_worker_protocol_sequence
+from .worker_protocol import aggregate_batch_hash, validate_worker_protocol_sequence
 
 __version__ = "5.0.0rc4"
 
@@ -62,6 +62,7 @@ __all__ = [
     "WorkerProtocolSemanticError",
     "__version__",
     "admit",
+    "aggregate_batch_hash",
     "canonical_dumps",
     "content_hash",
     "decimal_string",

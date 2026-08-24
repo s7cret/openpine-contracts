@@ -62,6 +62,22 @@ STACK_COMPONENTS = (
     "optimizer",
     "openpine",
 )
+POLICY_REGISTRY_VERSION = "openpine.policies.rc4.v1"
+SCHEMA_REGISTRY_VERSION = "openpine.schemas.rc4.v1"
+CAPABILITY_REGISTRY_VERSION = "openpine.capabilities.rc4.v1"
+PRODUCTION_SCHEMA_IDS = (
+    "openpine.execution_context.v1",
+    "openpine.worker.protocol.v2",
+    "openpine.checkpoint.v1",
+    "openpine.checkpoint.proof.v1",
+    "openpine.intent.v2",
+)
+CAPABILITIES = (
+    "closed_bar",
+    "deterministic_clock",
+    "checkpoint_v1",
+    "sealed_artifact_refs",
+)
 INTENT_KIND_FIELDS: dict[str, tuple[str, list[str], dict[str, object]]] = {
     "entry": (
         "EntryIntent",
@@ -818,6 +834,9 @@ def main() -> None:
                 "end_policy",
                 "capabilities",
                 "producer_commits",
+                "policy_registry_version",
+                "schema_registry_version",
+                "capability_registry_version",
             ],
             properties={
                 "run_id": NONEMPTY_STRING,
@@ -843,14 +862,10 @@ def main() -> None:
                         for component in STACK_COMPONENTS
                     ],
                 },
-                "schema_hashes": {
-                    "type": "object",
-                    "minProperties": 1,
-                    "additionalProperties": NONZERO_SHA,
-                    "propertyNames": {
-                        "pattern": r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\.v[1-9][0-9]*$"
-                    },
-                },
+                "schema_hashes": strict_object(
+                    list(PRODUCTION_SCHEMA_IDS),
+                    {schema_id: NONZERO_SHA for schema_id in PRODUCTION_SCHEMA_IDS},
+                ),
                 "generated_artifact_hash": NONZERO_SHA,
                 "source_hash": NONZERO_SHA,
                 "emitted_module_hash": NONZERO_SHA,
@@ -871,14 +886,22 @@ def main() -> None:
                 "warmup_policy": {
                     "enum": ["CALC_ONLY", "TRADE_THROUGH_UNSCORED", "CALC_THEN_RESET_BROKER"]
                 },
-                "score_policy": NONEMPTY_STRING,
-                "end_policy": NONEMPTY_STRING,
+                "score_policy": {"enum": ["ALL_BARS", "AFTER_WARMUP"]},
+                "end_policy": {"enum": ["LIQUIDATE_ON_LAST_BAR", "PRESERVE_OPEN_POSITIONS"]},
                 "capabilities": {
                     "type": "array",
+                    "minItems": 2,
                     "uniqueItems": True,
-                    "items": NONEMPTY_STRING,
+                    "items": {"enum": list(CAPABILITIES)},
+                    "allOf": [
+                        {"contains": {"const": capability}, "minContains": 1}
+                        for capability in ("closed_bar", "deterministic_clock")
+                    ],
                 },
                 "producer_commits": {"$ref": "#/$defs/ProducerCommits"},
+                "policy_registry_version": {"const": POLICY_REGISTRY_VERSION},
+                "schema_registry_version": {"const": SCHEMA_REGISTRY_VERSION},
+                "capability_registry_version": {"const": CAPABILITY_REGISTRY_VERSION},
             },
             defs={
                 "WheelIdentity": strict_object(
@@ -1342,6 +1365,61 @@ def main() -> None:
         ),
     )
 
+    checkpoint_payload_ref = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["codec", "compression", "size_bytes", "segment_schema_hashes"],
+        "properties": {
+            "codec": {"enum": ["json", "msgpack", "openpine.checkpoint.v1"]},
+            "compression": {"enum": ["none", "gzip", "zstd"]},
+            "size_bytes": {"type": "integer", "minimum": 1},
+            "segment_schema_hashes": {
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": NONZERO_SHA,
+                "propertyNames": {"pattern": r"^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\.v[1-9][0-9]*$"},
+            },
+            "uri": {"type": "string", "pattern": r"^(?:https?|s3|file)://.+$"},
+            "inline_base64": {
+                "type": "string",
+                "minLength": 4,
+                "pattern": r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+            },
+        },
+        "oneOf": [{"required": ["uri"]}, {"required": ["inline_base64"]}],
+    }
+
+    write(
+        "openpine.checkpoint.proof.v1.json",
+        rc4_schema(
+            "openpine.checkpoint.proof.v1",
+            "1.0.0",
+            required=[
+                "checkpoint_id",
+                "checkpoint_hash",
+                "committed_sequence",
+                "committed_message_id",
+                "state_hash",
+                "broker_projection_hash",
+                "payload_ref",
+            ],
+            properties={
+                "producer": {"const": "openpine"},
+                "producer_commit": NONZERO_GIT_SHA,
+                "stack_id": NONZERO_SHA,
+                "content_hash": NONZERO_SHA,
+                "checkpoint_id": NONEMPTY_STRING,
+                "checkpoint_hash": NONZERO_SHA,
+                "committed_sequence": {"type": "integer", "minimum": 0},
+                "committed_message_id": NONEMPTY_STRING,
+                "state_hash": NONZERO_SHA,
+                "broker_projection_hash": NONZERO_SHA,
+                "payload_ref": {"$ref": "#/$defs/CheckpointPayloadRef"},
+            },
+            defs={"CheckpointPayloadRef": checkpoint_payload_ref},
+        ),
+    )
+
     write(
         "openpine.checkpoint.v1.json",
         rc4_schema(
@@ -1362,6 +1440,8 @@ def main() -> None:
                 "engine_checkpoint_hash",
                 "worker_checkpoint_hash",
                 "combined_hash",
+                "checkpoint_hash",
+                "payload_ref",
             ],
             properties={
                 "checkpoint_id": NONEMPTY_STRING,
@@ -1378,7 +1458,10 @@ def main() -> None:
                 "engine_checkpoint_hash": NONZERO_SHA,
                 "worker_checkpoint_hash": NONZERO_SHA,
                 "combined_hash": NONZERO_SHA,
+                "checkpoint_hash": NONZERO_SHA,
+                "payload_ref": {"$ref": "#/$defs/CheckpointPayloadRef"},
             },
+            defs={"CheckpointPayloadRef": checkpoint_payload_ref},
         ),
     )
 
@@ -1466,8 +1549,10 @@ def main() -> None:
                                 "CALC_THEN_RESET_BROKER",
                             ]
                         },
-                        "score_policy": NONEMPTY_STRING,
-                        "end_policy": NONEMPTY_STRING,
+                        "score_policy": {"enum": ["ALL_BARS", "AFTER_WARMUP"]},
+                        "end_policy": {
+                            "enum": ["LIQUIDATE_ON_LAST_BAR", "PRESERVE_OPEN_POSITIONS"]
+                        },
                         "numeric_policy": NONEMPTY_STRING,
                         "fill_policy": NONEMPTY_STRING,
                     },
@@ -1525,8 +1610,10 @@ def main() -> None:
         "openpine.worker.protocol.v2.json",
         rc4_schema(
             "openpine.worker.protocol.v2",
-            "2.1.0",
+            "2.2.0",
             required=[
+                "message_id",
+                "sender_role",
                 "session_id",
                 "run_id",
                 "sequence",
@@ -1536,6 +1623,8 @@ def main() -> None:
                 "body",
             ],
             properties={
+                "message_id": NONEMPTY_STRING,
+                "sender_role": {"enum": ["parent", "worker", "engine"]},
                 "session_id": NONEMPTY_STRING,
                 "run_id": NONEMPTY_STRING,
                 "sequence": {"type": "integer", "minimum": 0},
@@ -1565,7 +1654,7 @@ def main() -> None:
                     ["worker_id", "protocol_version", "capabilities"],
                     {
                         "worker_id": NONEMPTY_STRING,
-                        "protocol_version": {"const": "2.1.0"},
+                        "protocol_version": {"const": "2.2.0"},
                         "capabilities": {
                             "type": "array",
                             "uniqueItems": True,
@@ -1668,11 +1757,18 @@ def main() -> None:
                     },
                 ),
                 "RecalcResult": strict_object(
-                    ["run_id", "bar_index", "recalc_iteration", "intent_batch_hash"],
+                    [
+                        "run_id",
+                        "bar_index",
+                        "recalc_iteration",
+                        "intent_batch_message_id",
+                        "intent_batch_hash",
+                    ],
                     {
                         "run_id": NONEMPTY_STRING,
                         "bar_index": {"type": "integer", "minimum": 0},
                         "recalc_iteration": {"type": "integer", "minimum": 1},
+                        "intent_batch_message_id": NONEMPTY_STRING,
                         "intent_batch_hash": NONZERO_SHA,
                     },
                 ),
@@ -1683,6 +1779,8 @@ def main() -> None:
                         "recalc_iteration",
                         "state_hash",
                         "broker_projection_hash",
+                        "state_ref",
+                        "broker_projection_ref",
                     ],
                     {
                         "run_id": NONEMPTY_STRING,
@@ -1690,15 +1788,24 @@ def main() -> None:
                         "recalc_iteration": {"type": "integer", "minimum": 0},
                         "state_hash": NONZERO_SHA,
                         "broker_projection_hash": NONZERO_SHA,
+                        "state_ref": {"$ref": "#/$defs/SealedArtifactRef"},
+                        "broker_projection_ref": {"$ref": "#/$defs/SealedArtifactRef"},
                     },
                 ),
                 "Checkpoint": strict_object(
-                    ["run_id", "checkpoint_id", "checkpoint_hash", "committed_sequence"],
+                    [
+                        "run_id",
+                        "checkpoint_id",
+                        "checkpoint_hash",
+                        "committed_sequence",
+                        "checkpoint_ref",
+                    ],
                     {
                         "run_id": NONEMPTY_STRING,
                         "checkpoint_id": NONEMPTY_STRING,
                         "checkpoint_hash": NONZERO_SHA,
                         "committed_sequence": {"type": "integer", "minimum": 0},
+                        "checkpoint_ref": {"$ref": "openpine.checkpoint.proof.v1"},
                     },
                 ),
                 "Restore": strict_object(
@@ -1708,15 +1815,35 @@ def main() -> None:
                         "checkpoint_id": NONEMPTY_STRING,
                         "checkpoint_hash": NONZERO_SHA,
                         "committed_sequence": {"type": "integer", "minimum": 0},
+                        "external_checkpoint_proof": {"$ref": "openpine.checkpoint.proof.v1"},
                     },
                 ),
                 "Finalize": strict_object(
-                    ["run_id", "final_sequence", "final_state_hash", "broker_projection_hash"],
+                    [
+                        "run_id",
+                        "final_sequence",
+                        "final_state_hash",
+                        "broker_projection_hash",
+                        "last_commit_message_id",
+                        "last_committed_sequence",
+                    ],
                     {
                         "run_id": NONEMPTY_STRING,
                         "final_sequence": {"type": "integer", "minimum": 0},
                         "final_state_hash": NONZERO_SHA,
                         "broker_projection_hash": NONZERO_SHA,
+                        "last_commit_message_id": NONEMPTY_STRING,
+                        "last_committed_sequence": {"type": "integer", "minimum": 0},
+                    },
+                ),
+                "SealedArtifactRef": strict_object(
+                    ["artifact_hash", "schema_id", "codec", "size_bytes", "uri"],
+                    {
+                        "artifact_hash": NONZERO_SHA,
+                        "schema_id": NONEMPTY_STRING,
+                        "codec": {"enum": ["json", "msgpack", "binary"]},
+                        "size_bytes": {"type": "integer", "minimum": 1},
+                        "uri": {"type": "string", "pattern": r"^(?:https?|s3|file)://.+$"},
                     },
                 ),
                 "Abort": strict_object(

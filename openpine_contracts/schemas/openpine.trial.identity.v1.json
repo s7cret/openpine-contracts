@@ -215,12 +215,16 @@
           ]
         },
         "score_policy": {
-          "type": "string",
-          "minLength": 1
+          "enum": [
+            "ALL_BARS",
+            "AFTER_WARMUP"
+          ]
         },
         "end_policy": {
-          "type": "string",
-          "minLength": 1
+          "enum": [
+            "LIQUIDATE_ON_LAST_BAR",
+            "PRESERVE_OPEN_POSITIONS"
+          ]
         },
         "numeric_policy": {
           "type": "string",

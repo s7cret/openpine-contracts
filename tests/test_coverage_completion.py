@@ -224,7 +224,7 @@ def test_worker_first_kind_and_body_run_branches(monkeypatch: pytest.MonkeyPatch
         _worker_message(
             "LOAD_ARTIFACT",
             1,
-            causation_id="correlation-1",
+            causation_id="msg-0",
             body={**WORKER_BODIES["LOAD_ARTIFACT"], "run_id": "other"},
         ),
     ]
@@ -270,7 +270,8 @@ def test_worker_nonmapping_intent_and_recalc_edge_branches(
     intent_body = messages[4]["body"]
     assert isinstance(intent_body, dict)
     intent_body["intents"] = [None]
-    worker.validate_worker_protocol_sequence(messages)
+    with pytest.raises(WorkerProtocolSemanticError, match="non-object item"):
+        worker.validate_worker_protocol_sequence(messages)
 
     allowed = dict(worker._ALLOWED_AFTER)
     allowed["INIT_RUN"] = frozenset({"RECALC_REQUEST"})
@@ -280,7 +281,7 @@ def test_worker_nonmapping_intent_and_recalc_edge_branches(
         _worker_message(
             "RECALC_REQUEST",
             3,
-            causation_id="correlation-1",
+            causation_id="msg-2",
             body=WORKER_BODIES["RECALC_REQUEST"],
         )
     )
@@ -301,7 +302,7 @@ def test_worker_nonmapping_intent_and_recalc_edge_branches(
         _worker_message(
             "RECALC_REQUEST",
             4,
-            causation_id="correlation-1",
+            causation_id="msg-3",
             body=WORKER_BODIES["RECALC_REQUEST"],
         )
     )
@@ -313,7 +314,7 @@ def test_worker_nonmapping_intent_and_recalc_edge_branches(
         _worker_message(
             "RECALC_REQUEST",
             4,
-            causation_id="correlation-1",
+            causation_id="msg-3",
             body={**WORKER_BODIES["RECALC_REQUEST"], "recalc_iteration": 4},
         )
     )
@@ -328,7 +329,7 @@ def test_worker_restore_mismatch_branch() -> None:
         _worker_message(
             "RESTORE",
             11,
-            causation_id="correlation-1",
+            causation_id="msg-10",
             body=restore_body,
         )
     )

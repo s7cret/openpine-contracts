@@ -25,6 +25,7 @@ RC4_IDS = (
     "openpine.execution_context.v1",
     "openpine.broker_projection.v1",
     "openpine.checkpoint.v1",
+    "openpine.checkpoint.proof.v1",
     "openpine.trial.identity.v1",
 )
 STACK_COMPONENTS = (
@@ -159,8 +160,11 @@ def _execution_context() -> dict[str, Any]:
                 for name in STACK_COMPONENTS
             ],
             "schema_hashes": {
+                "openpine.execution_context.v1": HASH_A,
                 "openpine.intent.v2": HASH_B,
                 "openpine.worker.protocol.v2": HASH_C,
+                "openpine.checkpoint.v1": HASH_D,
+                "openpine.checkpoint.proof.v1": HASH_A,
             },
             "generated_artifact_hash": HASH_B,
             "source_hash": HASH_C,
@@ -183,6 +187,9 @@ def _execution_context() -> dict[str, Any]:
             "score_policy": "ALL_BARS",
             "end_policy": "LIQUIDATE_ON_LAST_BAR",
             "capabilities": ["closed_bar", "deterministic_clock"],
+            "policy_registry_version": "openpine.policies.rc4.v1",
+            "schema_registry_version": "openpine.schemas.rc4.v1",
+            "capability_registry_version": "openpine.capabilities.rc4.v1",
             "producer_commits": {
                 "openpine-contracts": COMMIT_A,
                 "pine2ast": COMMIT_B,
@@ -308,6 +315,17 @@ def _checkpoint() -> dict[str, Any]:
             "engine_checkpoint_hash": HASH_A,
             "worker_checkpoint_hash": HASH_B,
             "combined_hash": HASH_C,
+            "checkpoint_hash": HASH_C,
+            "payload_ref": {
+                "codec": "msgpack",
+                "compression": "zstd",
+                "size_bytes": 4096,
+                "segment_schema_hashes": {
+                    "openpine.execution_context.v1": HASH_A,
+                    "openpine.broker_projection.v1": HASH_B,
+                },
+                "uri": "s3://openpine-checkpoints/checkpoint-1.bin",
+            },
         }
     )
     return contracts.seal_content_hash(payload, schema_id="openpine.checkpoint.v1")
@@ -511,10 +529,69 @@ def _broker_event() -> dict[str, Any]:
     return contracts.seal_content_hash(payload, schema_id="openpine.broker.v2")
 
 
+_INTENT_BATCH_ITEMS = [_intent("close_all")]
+_BROKER_EVENT_BATCH_ITEMS = [_broker_event()]
+_STATE_REF = {
+    "artifact_hash": HASH_A,
+    "schema_id": "openpine.runtime.state.v1",
+    "codec": "msgpack",
+    "size_bytes": 4096,
+    "uri": "file:///immutable/openpine/state-7.msgpack",
+}
+_PROJECTION_REF = {
+    "artifact_hash": HASH_B,
+    "schema_id": "openpine.broker_projection.v1",
+    "codec": "json",
+    "size_bytes": 2048,
+    "uri": "file:///immutable/openpine/projection-7.json",
+}
+
+
+def _checkpoint_payload_ref() -> dict[str, Any]:
+    return {
+        "codec": "msgpack",
+        "compression": "zstd",
+        "size_bytes": 8192,
+        "segment_schema_hashes": {
+            "openpine.checkpoint.v1": HASH_A,
+            "openpine.broker_projection.v1": HASH_B,
+        },
+        "uri": "s3://openpine-checkpoints/checkpoint-1.msgpack.zst",
+    }
+
+
+def _checkpoint_proof(
+    *,
+    checkpoint_id: str = "checkpoint-1",
+    checkpoint_hash: str = HASH_C,
+    committed_sequence: int = 9,
+    committed_message_id: str = "msg-9",
+    state_hash: str = HASH_A,
+    broker_projection_hash: str = HASH_B,
+) -> dict[str, Any]:
+    payload = _envelope("openpine.checkpoint.proof.v1", "1.0.0")
+    payload.update(
+        {
+            "producer": "openpine",
+            "producer_version": "5.0.0-rc.4",
+            "producer_commit": COMMIT_1,
+            "stack_id": HASH_D,
+            "checkpoint_id": checkpoint_id,
+            "checkpoint_hash": checkpoint_hash,
+            "committed_sequence": committed_sequence,
+            "committed_message_id": committed_message_id,
+            "state_hash": state_hash,
+            "broker_projection_hash": broker_projection_hash,
+            "payload_ref": _checkpoint_payload_ref(),
+        }
+    )
+    return contracts.seal_content_hash(payload, schema_id="openpine.checkpoint.proof.v1")
+
+
 WORKER_BODIES: dict[str, dict[str, Any]] = {
     "HELLO": {
         "worker_id": "worker-1",
-        "protocol_version": "2.1.0",
+        "protocol_version": "2.2.0",
         "capabilities": ["closed_bar", "checkpoint_v1"],
     },
     "LOAD_ARTIFACT": {
@@ -544,15 +621,23 @@ WORKER_BODIES: dict[str, dict[str, Any]] = {
         "run_id": "run-1",
         "bar_index": 7,
         "recalc_iteration": 0,
-        "intent_batch_hash": HASH_A,
-        "intents": [_intent("close_all")],
+        "intent_batch_hash": contracts.aggregate_batch_hash(
+            _INTENT_BATCH_ITEMS,
+            batch_kind="INTENT_BATCH",
+            item_schema_id="openpine.intent.v2",
+        ),
+        "intents": _INTENT_BATCH_ITEMS,
     },
     "BROKER_EVENT_BATCH": {
         "run_id": "run-1",
         "bar_index": 7,
         "recalc_iteration": 0,
-        "broker_event_batch_hash": HASH_B,
-        "broker_events": [_broker_event()],
+        "broker_event_batch_hash": contracts.aggregate_batch_hash(
+            _BROKER_EVENT_BATCH_ITEMS,
+            batch_kind="BROKER_EVENT_BATCH",
+            item_schema_id="openpine.broker.v2",
+        ),
+        "broker_events": _BROKER_EVENT_BATCH_ITEMS,
     },
     "RECALC_REQUEST": {
         "run_id": "run-1",
@@ -564,7 +649,12 @@ WORKER_BODIES: dict[str, dict[str, Any]] = {
         "run_id": "run-1",
         "bar_index": 7,
         "recalc_iteration": 1,
-        "intent_batch_hash": HASH_C,
+        "intent_batch_message_id": "msg-4",
+        "intent_batch_hash": contracts.aggregate_batch_hash(
+            _INTENT_BATCH_ITEMS,
+            batch_kind="INTENT_BATCH",
+            item_schema_id="openpine.intent.v2",
+        ),
     },
     "BAR_COMMIT": {
         "run_id": "run-1",
@@ -572,12 +662,15 @@ WORKER_BODIES: dict[str, dict[str, Any]] = {
         "recalc_iteration": 1,
         "state_hash": HASH_A,
         "broker_projection_hash": HASH_B,
+        "state_ref": _STATE_REF,
+        "broker_projection_ref": _PROJECTION_REF,
     },
     "CHECKPOINT": {
         "run_id": "run-1",
         "checkpoint_id": "checkpoint-1",
         "checkpoint_hash": HASH_C,
         "committed_sequence": 9,
+        "checkpoint_ref": _checkpoint_proof(),
     },
     "RESTORE": {
         "run_id": "run-1",
@@ -590,12 +683,45 @@ WORKER_BODIES: dict[str, dict[str, Any]] = {
         "final_sequence": 10,
         "final_state_hash": HASH_A,
         "broker_projection_hash": HASH_B,
+        "last_commit_message_id": "msg-9",
+        "last_committed_sequence": 9,
     },
     "ABORT": {
         "run_id": "run-1",
         "error_code": "RUNTIME_ABORT",
         "reason": "stopped",
     },
+}
+
+_ROLE_BY_KIND = {
+    "HELLO": "worker",
+    "LOAD_ARTIFACT": "parent",
+    "INIT_RUN": "parent",
+    "BAR_BEGIN": "parent",
+    "INTENT_BATCH": "worker",
+    "BROKER_EVENT_BATCH": "engine",
+    "RECALC_REQUEST": "engine",
+    "RECALC_RESULT": "worker",
+    "BAR_COMMIT": "engine",
+    "CHECKPOINT": "parent",
+    "RESTORE": "parent",
+    "FINALIZE": "parent",
+    "ABORT": "parent",
+}
+_COMPONENT_BY_KIND = {
+    "HELLO": ("openpine", COMMIT_1),
+    "LOAD_ARTIFACT": ("openpine", COMMIT_1),
+    "INIT_RUN": ("openpine", COMMIT_1),
+    "BAR_BEGIN": ("openpine", COMMIT_1),
+    "INTENT_BATCH": ("pinelib", COMMIT_D),
+    "BROKER_EVENT_BATCH": ("backtest_engine", COMMIT_F),
+    "RECALC_REQUEST": ("backtest_engine", COMMIT_F),
+    "RECALC_RESULT": ("pinelib", COMMIT_D),
+    "BAR_COMMIT": ("backtest_engine", COMMIT_F),
+    "CHECKPOINT": ("openpine", COMMIT_1),
+    "RESTORE": ("openpine", COMMIT_1),
+    "FINALIZE": ("openpine", COMMIT_1),
+    "ABORT": ("openpine", COMMIT_1),
 }
 
 
@@ -607,18 +733,25 @@ def _worker_message(
     causation_id: str | None = None,
     **overrides: Any,
 ) -> dict[str, Any]:
-    payload = _envelope("openpine.worker.protocol.v2", "2.1.0")
+    producer, producer_commit = _COMPONENT_BY_KIND[kind]
+    payload = _envelope("openpine.worker.protocol.v2", "2.2.0")
     payload.update(
         {
-            "producer": "openpine",
+            "producer": producer,
             "producer_version": "5.0.0-rc.4",
-            "producer_commit": COMMIT_1,
+            "producer_commit": producer_commit,
             "stack_id": HASH_D,
+            "message_id": f"msg-{sequence}",
+            "sender_role": _ROLE_BY_KIND[kind],
             "session_id": "session-1",
             "run_id": "run-1",
             "sequence": sequence,
             "correlation_id": "correlation-1",
-            "causation_id": causation_id,
+            "causation_id": (
+                causation_id
+                if causation_id is not None
+                else (None if sequence == 0 else f"msg-{sequence - 1}")
+            ),
             "kind": kind,
             "body": deepcopy(WORKER_BODIES[kind] if body is None else body),
         }
@@ -642,18 +775,42 @@ def _valid_worker_sequence() -> list[dict[str, Any]]:
         "CHECKPOINT",
         "FINALIZE",
     ]
-    messages = [
-        _worker_message(kind, index, causation_id=None if index == 0 else "correlation-1")
-        for index, kind in enumerate(kinds)
-    ]
+    messages = [_worker_message(kind, index) for index, kind in enumerate(kinds)]
+    second_intents = [_intent("close_all", recalc_iteration=1)]
+    messages[7]["body"] = deepcopy(WORKER_BODIES["RECALC_RESULT"])
+    messages[7]["body"].update(
+        {
+            "intent_batch_message_id": "msg-4",
+            "intent_batch_hash": WORKER_BODIES["INTENT_BATCH"]["intent_batch_hash"],
+        }
+    )
     messages[8]["body"] = dict(
         WORKER_BODIES["INTENT_BATCH"],
         recalc_iteration=1,
-        intents=[_intent("close_all", recalc_iteration=1)],
+        intents=second_intents,
+        intent_batch_hash=contracts.aggregate_batch_hash(
+            second_intents,
+            batch_kind="INTENT_BATCH",
+            item_schema_id="openpine.intent.v2",
+        ),
     )
-    messages[9]["body"] = dict(WORKER_BODIES["BAR_COMMIT"], recalc_iteration=1)
-    messages[10]["body"] = dict(WORKER_BODIES["CHECKPOINT"], committed_sequence=9)
-    messages[11]["body"] = dict(WORKER_BODIES["FINALIZE"], final_sequence=10)
+    messages[9]["body"] = deepcopy(WORKER_BODIES["BAR_COMMIT"])
+    messages[9]["body"]["recalc_iteration"] = 1
+    messages[10]["body"] = deepcopy(WORKER_BODIES["CHECKPOINT"])
+    messages[10]["body"].update(
+        {
+            "committed_sequence": 9,
+            "checkpoint_ref": _checkpoint_proof(),
+        }
+    )
+    messages[11]["body"] = deepcopy(WORKER_BODIES["FINALIZE"])
+    messages[11]["body"].update(
+        {
+            "final_sequence": 10,
+            "last_commit_message_id": "msg-9",
+            "last_committed_sequence": 9,
+        }
+    )
     return [
         contracts.seal_content_hash(message, schema_id="openpine.worker.protocol.v2")
         for message in messages
@@ -1147,9 +1304,9 @@ def test_worker_protocol_semantic_sequence_accepts_canonical_state_machine() -> 
         (4, "session_id", "other-session", "SESSION_ID_MISMATCH"),
         (4, "run_id", "other-run", "RUN_ID_MISMATCH"),
         (4, "stack_id", HASH_C, "STACK_ID_MISMATCH"),
-        (4, "producer", "other-producer", "PRODUCER_MISMATCH"),
-        (4, "producer_version", "5.0.1", "PRODUCER_VERSION_MISMATCH"),
-        (4, "producer_commit", COMMIT_A, "PRODUCER_COMMIT_MISMATCH"),
+        (4, "producer", "other-producer", "MESSAGE_PRODUCER_IDENTITY_MISMATCH"),
+        (4, "producer_version", "5.0.1", "MESSAGE_PRODUCER_IDENTITY_MISMATCH"),
+        (4, "producer_commit", COMMIT_A, "MESSAGE_PRODUCER_IDENTITY_MISMATCH"),
         (4, "correlation_id", "other-correlation", "CORRELATION_ID_MISMATCH"),
         (4, "causation_id", "other-causation", "CAUSATION_ID_MISMATCH"),
     ],
@@ -1189,7 +1346,7 @@ def test_worker_protocol_binds_root_producer_identity_to_execution_context(
     with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
         contracts.validate_worker_protocol_sequence(messages)
 
-    assert caught.value.details["reason"] == "ROOT_PRODUCER_IDENTITY_MISMATCH"
+    assert caught.value.details["reason"] == "MESSAGE_PRODUCER_IDENTITY_MISMATCH"
     assert caught.value.details["field"] == field
 
 
@@ -1259,6 +1416,11 @@ def test_worker_protocol_rejects_nested_provenance_drift(
         else:
             nested[field] = value
         items[0] = contracts.seal_content_hash(nested, schema_id="openpine.intent.v2")
+        body["intent_batch_hash"] = contracts.aggregate_batch_hash(
+            items,
+            batch_kind="INTENT_BATCH",
+            item_schema_id="openpine.intent.v2",
+        )
     elif target == "bar":
         message_index = 3
         body = messages[message_index]["body"]
@@ -1286,6 +1448,11 @@ def test_worker_protocol_rejects_nested_provenance_drift(
         nested = items[0]
         nested[field] = value
         items[0] = contracts.seal_content_hash(nested, schema_id="openpine.broker.v2")
+        body["broker_event_batch_hash"] = contracts.aggregate_batch_hash(
+            items,
+            batch_kind="BROKER_EVENT_BATCH",
+            item_schema_id="openpine.broker.v2",
+        )
 
     messages[message_index] = contracts.seal_content_hash(
         messages[message_index], schema_id="openpine.worker.protocol.v2"
@@ -1300,7 +1467,7 @@ def test_worker_protocol_rejects_nested_provenance_drift(
 def test_worker_protocol_semantic_sequence_rejects_forbidden_transition() -> None:
     messages = _valid_worker_sequence()
     messages[4] = _worker_message(
-        "FINALIZE", 4, causation_id="correlation-1", body=WORKER_BODIES["FINALIZE"]
+        "FINALIZE", 4, causation_id="msg-3", body=WORKER_BODIES["FINALIZE"]
     )
     with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
         contracts.validate_worker_protocol_sequence(messages[:5])
@@ -1338,7 +1505,7 @@ def test_worker_protocol_semantic_sequence_rejects_truncation_and_post_terminal_
         contracts.validate_worker_protocol_sequence(messages[:3])
     assert caught.value.details["reason"] == "TRUNCATED_SEQUENCE"
 
-    messages.append(_worker_message("ABORT", 12, causation_id="correlation-1"))
+    messages.append(_worker_message("ABORT", 12, causation_id="msg-11"))
     with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
         contracts.validate_worker_protocol_sequence(messages)
     assert caught.value.details["reason"] == "INVALID_TRANSITION"
@@ -1346,8 +1513,8 @@ def test_worker_protocol_semantic_sequence_rejects_truncation_and_post_terminal_
     messages = _valid_worker_sequence()[:3]
     messages.extend(
         [
-            _worker_message("ABORT", 3, causation_id="correlation-1"),
-            _worker_message("ABORT", 4, causation_id="correlation-1"),
+            _worker_message("ABORT", 3, causation_id="msg-2"),
+            _worker_message("ABORT", 4, causation_id="msg-3"),
         ]
     )
     with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
@@ -1390,6 +1557,11 @@ def test_worker_protocol_semantic_sequence_rejects_cross_message_identity_drift(
     assert isinstance(intent, dict)
     intent["run_id"] = "other-run"
     intents[0] = contracts.seal_content_hash(intent, schema_id="openpine.intent.v2")
+    body["intent_batch_hash"] = contracts.aggregate_batch_hash(
+        intents,
+        batch_kind="INTENT_BATCH",
+        item_schema_id="openpine.intent.v2",
+    )
     messages[4] = contracts.seal_content_hash(messages[4], schema_id="openpine.worker.protocol.v2")
     with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
         contracts.validate_worker_protocol_sequence(messages)
