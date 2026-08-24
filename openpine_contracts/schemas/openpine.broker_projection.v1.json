@@ -29,6 +29,8 @@
     "unrealized_pnl",
     "gross_profit",
     "gross_loss",
+    "max_drawdown",
+    "max_runup",
     "commission",
     "winning_trades",
     "losing_trades",
@@ -144,6 +146,14 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "max_drawdown": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "max_runup": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
     },
     "commission": {
       "type": "string",

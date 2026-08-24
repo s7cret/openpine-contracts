@@ -285,6 +285,8 @@ def _broker_projection(recalc_iteration: int = 0) -> dict[str, Any]:
             "unrealized_pnl": "2",
             "gross_profit": "5",
             "gross_loss": "0",
+            "max_drawdown": "1.5",
+            "max_runup": "7",
             "commission": "0.3",
             "winning_trades": 1,
             "losing_trades": 0,
