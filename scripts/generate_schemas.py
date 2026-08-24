@@ -1610,7 +1610,7 @@ def main() -> None:
         "openpine.worker.protocol.v2.json",
         rc4_schema(
             "openpine.worker.protocol.v2",
-            "2.2.0",
+            "2.3.0",
             required=[
                 "message_id",
                 "sender_role",
@@ -1654,7 +1654,7 @@ def main() -> None:
                     ["worker_id", "protocol_version", "capabilities"],
                     {
                         "worker_id": NONEMPTY_STRING,
-                        "protocol_version": {"const": "2.2.0"},
+                        "protocol_version": {"const": "2.3.0"},
                         "capabilities": {
                             "type": "array",
                             "uniqueItems": True,
@@ -1748,12 +1748,21 @@ def main() -> None:
                     },
                 ),
                 "RecalcRequest": strict_object(
-                    ["run_id", "bar_index", "recalc_iteration", "cause_sequence"],
+                    [
+                        "run_id",
+                        "bar_index",
+                        "recalc_iteration",
+                        "cause_sequence",
+                        "broker_projection_hash",
+                        "broker_projection",
+                    ],
                     {
                         "run_id": NONEMPTY_STRING,
                         "bar_index": {"type": "integer", "minimum": 0},
                         "recalc_iteration": {"type": "integer", "minimum": 1},
                         "cause_sequence": {"type": "integer", "minimum": 0},
+                        "broker_projection_hash": NONZERO_SHA,
+                        "broker_projection": {"$ref": "openpine.broker_projection.v1"},
                     },
                 ),
                 "RecalcResult": strict_object(

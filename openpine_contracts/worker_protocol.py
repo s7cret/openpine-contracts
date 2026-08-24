@@ -91,6 +91,7 @@ def _verify_nested_hashes(kind: str, body: Mapping[str, object], index: int) -> 
             ("bar", "openpine.marketdata.bar.v2"),
             ("broker_projection", "openpine.broker_projection.v1"),
         ),
+        "RECALC_REQUEST": (("broker_projection", "openpine.broker_projection.v1"),),
     }
     for field, schema_id in singletons.get(kind, ()):
         nested = body.get(field)
@@ -644,6 +645,50 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                         index=index,
                         expected=index - 1,
                         actual=body.get("cause_sequence"),
+                    )
+                projection = body.get("broker_projection")
+                if not isinstance(projection, Mapping) or body.get(
+                    "broker_projection_hash"
+                ) != projection.get("content_hash"):
+                    _fail(
+                        "PROJECTION_HASH_MISMATCH",
+                        "RECALC_REQUEST projection hash does not identify its payload",
+                        index=index,
+                    )
+                projection_expectations = {
+                    "run_id": baseline["run_id"],
+                    "series_id": (
+                        execution_context.get("series_id")
+                        if execution_context is not None
+                        else None
+                    ),
+                    "instrument_id": (
+                        execution_context.get("instrument_id")
+                        if execution_context is not None
+                        else None
+                    ),
+                    "bar_index": current_bar["bar_index"],
+                    "bar_open_time_utc_ms": current_bar["bar_open_time_utc_ms"],
+                    "recalc_iteration": expected_recalc,
+                }
+                for field, expected in projection_expectations.items():
+                    if projection.get(field) != expected:
+                        _fail(
+                            "PROJECTION_IDENTITY_MISMATCH",
+                            "RECALC_REQUEST projection differs from the active callback",
+                            index=index,
+                            field=field,
+                            expected=expected,
+                            actual=projection.get(field),
+                        )
+                if execution_context is not None:
+                    _validate_component_provenance(
+                        projection,
+                        execution_context=execution_context,
+                        component="backtest_engine",
+                        reason="PROJECTION_PROVENANCE_MISMATCH",
+                        message="recalculation projection differs from the admitted stack",
+                        index=index,
                     )
                 current_bar["recalc_iteration"] = expected_recalc
             elif kind == "CHECKPOINT":

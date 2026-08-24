@@ -78,7 +78,7 @@ def _intent(kind: str, **fields: object) -> dict[str, object]:
     return payload
 
 
-def test_worker_protocol_v2_2_uses_causal_state_machine_envelope() -> None:
+def test_worker_protocol_v2_3_uses_causal_state_machine_envelope() -> None:
     schema = get_schema("openpine.worker.protocol.v2")
     required = schema["required"]
     properties = schema["properties"]
@@ -91,7 +91,7 @@ def test_worker_protocol_v2_2_uses_causal_state_machine_envelope() -> None:
         "missing_state_machine_fields": sorted(RC4_WORKER_ENVELOPE_FIELDS - required_fields),
         "missing_provenance_fields": sorted(RC4_PROVENANCE_ENVELOPE_FIELDS - required_fields),
     } == {
-        "schema_version": {"const": "2.2.0"},
+        "schema_version": {"const": "2.3.0"},
         "missing_state_machine_fields": [],
         "missing_provenance_fields": [],
     }

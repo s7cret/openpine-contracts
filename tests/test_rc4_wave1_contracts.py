@@ -205,7 +205,7 @@ def _execution_context() -> dict[str, Any]:
     return contracts.seal_content_hash(payload, schema_id="openpine.execution_context.v1")
 
 
-def _broker_projection() -> dict[str, Any]:
+def _broker_projection(recalc_iteration: int = 0) -> dict[str, Any]:
     payload = _envelope("openpine.broker_projection.v1", "1.0.0")
     payload.update(
         {
@@ -218,7 +218,7 @@ def _broker_projection() -> dict[str, Any]:
             "instrument_id": "binance:BTCUSDT",
             "bar_index": 7,
             "bar_open_time_utc_ms": 6_300_000,
-            "recalc_iteration": 0,
+            "recalc_iteration": recalc_iteration,
             "position": {
                 "direction": "LONG",
                 "qty": "1",
@@ -591,7 +591,7 @@ def _checkpoint_proof(
 WORKER_BODIES: dict[str, dict[str, Any]] = {
     "HELLO": {
         "worker_id": "worker-1",
-        "protocol_version": "2.2.0",
+        "protocol_version": "2.3.0",
         "capabilities": ["closed_bar", "checkpoint_v1"],
     },
     "LOAD_ARTIFACT": {
@@ -644,6 +644,8 @@ WORKER_BODIES: dict[str, dict[str, Any]] = {
         "bar_index": 7,
         "recalc_iteration": 1,
         "cause_sequence": 5,
+        "broker_projection_hash": _broker_projection(1)["content_hash"],
+        "broker_projection": _broker_projection(1),
     },
     "RECALC_RESULT": {
         "run_id": "run-1",
@@ -734,7 +736,7 @@ def _worker_message(
     **overrides: Any,
 ) -> dict[str, Any]:
     producer, producer_commit = _COMPONENT_BY_KIND[kind]
-    payload = _envelope("openpine.worker.protocol.v2", "2.2.0")
+    payload = _envelope("openpine.worker.protocol.v2", "2.3.0")
     payload.update(
         {
             "producer": producer,
@@ -1599,6 +1601,31 @@ def test_worker_protocol_semantic_sequence_rejects_invalid_sequence_references()
         with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
             contracts.validate_worker_protocol_sequence(messages)
         assert caught.value.details["reason"] == reason
+
+
+def test_recalc_request_rejects_projection_hash_and_identity_drift() -> None:
+    messages = _valid_worker_sequence()
+    body = messages[6]["body"]
+    assert isinstance(body, dict)
+    body["broker_projection_hash"] = HASH_A
+    messages[6] = contracts.seal_content_hash(messages[6], schema_id="openpine.worker.protocol.v2")
+    with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
+        contracts.validate_worker_protocol_sequence(messages)
+    assert caught.value.details["reason"] == "PROJECTION_HASH_MISMATCH"
+
+    messages = _valid_worker_sequence()
+    body = messages[6]["body"]
+    assert isinstance(body, dict)
+    projection = body["broker_projection"]
+    assert isinstance(projection, dict)
+    projection["bar_index"] = 8
+    projection = contracts.seal_content_hash(projection, schema_id="openpine.broker_projection.v1")
+    body["broker_projection"] = projection
+    body["broker_projection_hash"] = projection["content_hash"]
+    messages[6] = contracts.seal_content_hash(messages[6], schema_id="openpine.worker.protocol.v2")
+    with pytest.raises(contracts.WorkerProtocolSemanticError) as caught:
+        contracts.validate_worker_protocol_sequence(messages)
+    assert caught.value.details["reason"] == "PROJECTION_IDENTITY_MISMATCH"
 
 
 def test_schema_generation_is_deterministic_and_idempotent(tmp_path: Path) -> None:

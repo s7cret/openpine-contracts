@@ -29,7 +29,7 @@
       "const": "openpine.worker.protocol.v2"
     },
     "schema_version": {
-      "const": "2.2.0"
+      "const": "2.3.0"
     },
     "producer": {
       "type": "string",
@@ -130,7 +130,7 @@
           "minLength": 1
         },
         "protocol_version": {
-          "const": "2.2.0"
+          "const": "2.3.0"
         },
         "capabilities": {
           "type": "array",
@@ -330,7 +330,9 @@
         "run_id",
         "bar_index",
         "recalc_iteration",
-        "cause_sequence"
+        "cause_sequence",
+        "broker_projection_hash",
+        "broker_projection"
       ],
       "properties": {
         "run_id": {
@@ -348,6 +350,13 @@
         "cause_sequence": {
           "type": "integer",
           "minimum": 0
+        },
+        "broker_projection_hash": {
+          "type": "string",
+          "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+        },
+        "broker_projection": {
+          "$ref": "openpine.broker_projection.v1"
         }
       }
     },

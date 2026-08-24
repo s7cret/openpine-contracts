@@ -21,11 +21,14 @@ def _reseal(message: dict[str, object]) -> dict[str, object]:
     return contracts.seal_content_hash(message, schema_id="openpine.worker.protocol.v2")
 
 
-def test_worker_protocol_v2_2_requires_message_identity_and_sender_role() -> None:
+def test_worker_protocol_v2_3_requires_message_identity_and_recalc_projection() -> None:
     schema = get_schema("openpine.worker.protocol.v2")
-    assert schema["properties"]["schema_version"] == {"const": "2.2.0"}
+    assert schema["properties"]["schema_version"] == {"const": "2.3.0"}
     assert {"message_id", "sender_role"} <= set(schema["required"])
     assert schema["properties"]["sender_role"] == {"enum": ["parent", "worker", "engine"]}
+    recalc = schema["$defs"]["RecalcRequest"]
+    assert {"broker_projection", "broker_projection_hash"} <= set(recalc["required"])
+    assert recalc["properties"]["broker_projection"] == {"$ref": "openpine.broker_projection.v1"}
 
 
 def test_execution_context_uses_closed_versioned_policy_and_registry_contracts() -> None:
