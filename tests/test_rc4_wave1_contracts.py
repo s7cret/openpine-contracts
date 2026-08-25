@@ -45,7 +45,7 @@ def _envelope(schema_id: str, schema_version: str) -> dict[str, Any]:
         "schema_id": schema_id,
         "schema_version": schema_version,
         "producer": "openpine-contract-tests",
-        "producer_version": "5.0.0-rc.4",
+        "producer_version": "5.0.0-rc.5",
         "producer_commit": COMMIT_D,
         "stack_id": HASH_D,
         "created_at_utc_ms": 0,
@@ -121,7 +121,7 @@ def _intent(kind: str, **overrides: Any) -> dict[str, Any]:
     payload.update(
         {
             "producer": "pinelib",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_D,
             "stack_id": HASH_D,
             "event_id": "evt-1",
@@ -156,7 +156,7 @@ def _execution_context() -> dict[str, Any]:
             "session_id": "session-1",
             "stack_manifest_hash": HASH_D,
             "wheel_identities": [
-                {"name": name, "version": "5.0.0rc4", "content_hash": HASH_B}
+                {"name": name, "version": "5.0.0rc5", "content_hash": HASH_B}
                 for name in STACK_COMPONENTS
             ],
             "schema_hashes": {
@@ -210,7 +210,7 @@ def _broker_projection(recalc_iteration: int = 0) -> dict[str, Any]:
     payload.update(
         {
             "producer": "backtest_engine",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_F,
             "stack_id": HASH_D,
             "run_id": "run-1",
@@ -404,7 +404,7 @@ def _canonical_bar() -> dict[str, Any]:
     payload.update(
         {
             "producer": "marketdata-provider",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_E,
             "stack_id": HASH_D,
             "series_id": "binance:BTCUSDT:15m",
@@ -477,7 +477,7 @@ def _marketdata_message(kind: str, body: dict[str, Any]) -> dict[str, Any]:
     payload.update(
         {
             "producer": "marketdata-provider",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_E,
             "stack_id": HASH_D,
             "kind": kind,
@@ -516,7 +516,7 @@ def _broker_event() -> dict[str, Any]:
     payload.update(
         {
             "producer": "backtest_engine",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_F,
             "stack_id": HASH_D,
             "kind": "event",
@@ -575,7 +575,7 @@ def _checkpoint_proof(
     payload.update(
         {
             "producer": "openpine",
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": COMMIT_1,
             "stack_id": HASH_D,
             "checkpoint_id": checkpoint_id,
@@ -742,7 +742,7 @@ def _worker_message(
     payload.update(
         {
             "producer": producer,
-            "producer_version": "5.0.0-rc.4",
+            "producer_version": "5.0.0-rc.5",
             "producer_commit": producer_commit,
             "stack_id": HASH_D,
             "message_id": f"msg-{sequence}",

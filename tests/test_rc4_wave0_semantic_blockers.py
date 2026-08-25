@@ -43,7 +43,7 @@ def _intent(kind: str, **fields: object) -> dict[str, object]:
         "schema_id": "openpine.intent.v2",
         "schema_version": "2.2.0",
         "producer": "openpine-contract-tests",
-        "producer_version": "5.0.0-rc.4",
+        "producer_version": "5.0.0-rc.5",
         "producer_commit": "d" * 40,
         "stack_id": "sha256:" + ("b" * 64),
         "created_at_utc_ms": 0,

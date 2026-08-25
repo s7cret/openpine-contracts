@@ -6,8 +6,8 @@ Accepted. 2026-08-15.
 
 ## Decision
 
-- The coordinated RC.4 wheel train uses one PEP 440 version: `5.0.0rc4`
-  (displayed as `5.0.0-rc.4`).
+- The coordinated RC.4 wheel train uses one PEP 440 version: `5.0.0rc5`
+  (displayed as `5.0.0-rc.5`).
 - Source commits and wheel hashes remain independent immutable identities in
   the external stack candidate manifest.
 - Schema IDs use family names plus major: `openpine.marketdata.v2`.

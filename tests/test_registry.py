@@ -32,7 +32,7 @@ def _envelope(schema_id: str, extra: dict[str, object]) -> dict[str, object]:
             {
                 "schema_version": "2.1.0",
                 "producer": "marketdata-provider",
-                "producer_version": "5.0.0-rc.4",
+                "producer_version": "5.0.0-rc.5",
                 "producer_commit": "a" * 40,
                 "stack_id": "sha256:" + ("b" * 64),
             }
