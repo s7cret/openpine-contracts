@@ -45,7 +45,7 @@ _KIND_COMPONENT = {
     "LOAD_ARTIFACT": "openpine",
     "INIT_RUN": "openpine",
     "BAR_BEGIN": "openpine",
-    "INTENT_BATCH": "pinelib",
+    "INTENT_BATCH": "backtest_engine",
     "BROKER_EVENT_BATCH": "backtest_engine",
     "RECALC_REQUEST": "backtest_engine",
     "RECALC_RESULT": "pinelib",
@@ -540,7 +540,7 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                             _validate_component_provenance(
                                 intent,
                                 execution_context=execution_context,
-                                component="pinelib",
+                                component="backtest_engine",
                                 reason="INTENT_PROVENANCE_MISMATCH",
                                 message="intent provenance differs from the admitted stack",
                                 index=index,

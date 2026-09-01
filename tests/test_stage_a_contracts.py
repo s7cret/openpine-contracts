@@ -256,7 +256,7 @@ def test_bidirectional_messages_keep_distinct_admitted_producers() -> None:
         ("parent", "openpine"),
         ("parent", "openpine"),
         ("parent", "openpine"),
-        ("worker", "pinelib"),
+        ("worker", "backtest_engine"),
         ("engine", "backtest_engine"),
     ]
     contracts.validate_worker_protocol_sequence(messages)

@@ -1,4 +1,5 @@
 import copy
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -165,14 +166,15 @@ def test_artifact_envelope_from_mapping_does_not_coerce_string_fields(field: str
         contracts.ArtifactEnvelope.from_mapping(payload)
 
 
-def test_release_metadata_is_5_0_0_rc5_everywhere() -> None:
+def test_release_metadata_is_5_0_0_rc6_everywhere() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     adr = (ROOT / "docs" / "adr" / "001-versioning.md").read_text(encoding="utf-8")
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
-    assert pyproject["project"]["version"] == "5.0.0rc5"
-    assert contracts.__version__ == "5.0.0rc5"
-    assert "5.0.0-rc.5" in readme
-    assert "5.0.0-rc.5" in adr
-    assert 'openpine_contracts.__version__ == "5.0.0rc5"' in workflow
+    assert pyproject["project"]["version"] == "5.0.0rc6"
+    assert contracts.__version__ == "5.0.0rc6"
+    assert "5.0.0-rc.6" in readme
+    assert re.findall(r"`(\d+\.\d+\.\d+rc\d+)`", adr) == ["5.0.0rc6"]
+    assert re.findall(r"`(\d+\.\d+\.\d+-rc\.\d+)`", adr) == ["5.0.0-rc.6"]
+    assert 'openpine_contracts.__version__ == "5.0.0rc6"' in workflow

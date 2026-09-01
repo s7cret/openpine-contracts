@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.generated_artifact.v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id",
+    "schema_version",
+    "producer",
+    "bundle_hash",
+    "source_hash",
+    "version_context",
+    "catalog_hash",
+    "lowering_plan_hash",
+    "target_manifest_hash",
+    "emitted_module_hash",
+    "source_map_hash",
+    "entrypoint",
+    "required_operations",
+    "required_capabilities",
+    "import_manifest",
+    "projection_proof",
+    "release_acceptance",
+    "content_hash"
+  ],
+  "properties": {
+    "schema_id": {
+      "const": "openpine.generated_artifact.v3"
+    },
+    "schema_version": {
+      "const": "3.0.0"
+    },
+    "producer": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version",
+            "commit",
+            "source_state"
+          ],
+          "properties": {
+            "name": {
+              "const": "ast2python"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "source_state": {
+              "const": "COMMIT_PINNED"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version",
+            "commit",
+            "source_state"
+          ],
+          "properties": {
+            "name": {
+              "const": "ast2python"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
+            },
+            "commit": {
+              "type": "null"
+            },
+            "source_state": {
+              "const": "UNCOMMITTED_LOCAL_BUILD"
+            }
+          }
+        }
+      ]
+    },
+    "bundle_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "version_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pine_version",
+        "origin",
+        "annotation_span",
+        "spec_snapshot_ref",
+        "catalog_hash",
+        "context_hash"
+      ],
+      "properties": {
+        "pine_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "origin": {
+          "enum": [
+            "compiler_annotation",
+            "tradingview_default_v1"
+          ]
+        },
+        "annotation_span": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start_offset",
+                "end_offset",
+                "start_line",
+                "start_col",
+                "end_line",
+                "end_col"
+              ],
+              "properties": {
+                "start_offset": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end_offset": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "start_line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "start_col": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "end_line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "end_col": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "spec_snapshot_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "catalog_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "context_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "catalog_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "lowering_plan_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "target_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "emitted_module_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_map_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "entrypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "class"
+      ],
+      "properties": {
+        "module": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "class": {
+          "const": "GeneratedScript"
+        }
+      }
+    },
+    "required_operations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "import_manifest": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
+      }
+    },
+    "projection_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disposition_counts",
+        "source_node_count",
+        "ir_node_count",
+        "source_map_entry_count",
+        "mapped_ir_count",
+        "mapped_ir_coverage"
+      ],
+      "properties": {
+        "disposition_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "EMITTED",
+            "COMPILE_TIME_ONLY",
+            "FOLDED",
+            "EXPANDED",
+            "DELEGATED",
+            "REJECTED"
+          ],
+          "properties": {
+            "EMITTED": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "COMPILE_TIME_ONLY": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "FOLDED": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "EXPANDED": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "DELEGATED": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "REJECTED": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "source_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ir_node_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_map_entry_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mapped_ir_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mapped_ir_coverage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "release_acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pine2ast_rc6",
+        "pinelib_rc6",
+        "tradingview_oracle"
+      ],
+      "properties": {
+        "pine2ast_rc6": {
+          "const": "EXACT_CORRECTED_BUNDLE_ACCEPTED"
+        },
+        "pinelib_rc6": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tradingview_oracle": {
+          "const": "NOT_CLAIMED"
+        }
+      }
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -20,6 +20,7 @@ CATALOG: tuple[str, ...] = (
     "openpine.frontend.v2",
     "openpine.support_profile.v2",
     "openpine.generated_artifact.v2",
+    "openpine.generated_artifact.v3",
     "openpine.runtime.v2",
     "openpine.marketdata.v2",
     "openpine.execution_context.v1",

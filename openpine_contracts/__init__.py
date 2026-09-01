@@ -34,7 +34,7 @@ from .registry import get_schema, list_schema_ids, schema_bytes, schema_hash
 from .validate import validate_payload
 from .worker_protocol import aggregate_batch_hash, validate_worker_protocol_sequence
 
-__version__ = "5.0.0rc5"
+__version__ = "5.0.0rc6"
 
 __all__ = [
     "AdmitError",

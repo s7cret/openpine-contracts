@@ -120,9 +120,9 @@ def _intent(kind: str, **overrides: Any) -> dict[str, Any]:
     payload = _envelope("openpine.intent.v2", "2.2.0")
     payload.update(
         {
-            "producer": "pinelib",
+            "producer": "backtest_engine",
             "producer_version": "5.0.0-rc.5",
-            "producer_commit": COMMIT_D,
+            "producer_commit": COMMIT_F,
             "stack_id": HASH_D,
             "event_id": "evt-1",
             "sequence": 0,
@@ -717,7 +717,7 @@ _COMPONENT_BY_KIND = {
     "LOAD_ARTIFACT": ("openpine", COMMIT_1),
     "INIT_RUN": ("openpine", COMMIT_1),
     "BAR_BEGIN": ("openpine", COMMIT_1),
-    "INTENT_BATCH": ("pinelib", COMMIT_D),
+    "INTENT_BATCH": ("backtest_engine", COMMIT_F),
     "BROKER_EVENT_BATCH": ("backtest_engine", COMMIT_F),
     "RECALC_REQUEST": ("backtest_engine", COMMIT_F),
     "RECALC_RESULT": ("pinelib", COMMIT_D),

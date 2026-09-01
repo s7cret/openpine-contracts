@@ -496,6 +496,149 @@ def main() -> None:
         ),
     )
 
+    source_span = strict_object(
+        ["start_offset", "end_offset", "start_line", "start_col", "end_line", "end_col"],
+        {
+            "start_offset": {"type": "integer", "minimum": 0},
+            "end_offset": {"type": "integer", "minimum": 0},
+            "start_line": {"type": "integer", "minimum": 1},
+            "start_col": {"type": "integer", "minimum": 1},
+            "end_line": {"type": "integer", "minimum": 1},
+            "end_col": {"type": "integer", "minimum": 1},
+        },
+    )
+    producer_fields = ["name", "version", "commit", "source_state"]
+    producer_identity = {
+        "oneOf": [
+            strict_object(
+                producer_fields,
+                {
+                    "name": {"const": "ast2python"},
+                    "version": WHEEL_VERSION,
+                    "commit": GIT_SHA,
+                    "source_state": {"const": "COMMIT_PINNED"},
+                },
+            ),
+            strict_object(
+                producer_fields,
+                {
+                    "name": {"const": "ast2python"},
+                    "version": WHEEL_VERSION,
+                    "commit": {"type": "null"},
+                    "source_state": {"const": "UNCOMMITTED_LOCAL_BUILD"},
+                },
+            ),
+        ]
+    }
+    version_context = strict_object(
+        [
+            "pine_version",
+            "origin",
+            "annotation_span",
+            "spec_snapshot_ref",
+            "catalog_hash",
+            "context_hash",
+        ],
+        {
+            "pine_version": {"type": "integer", "minimum": 1, "maximum": 6},
+            "origin": {"enum": ["compiler_annotation", "tradingview_default_v1"]},
+            "annotation_span": {"anyOf": [source_span, {"type": "null"}]},
+            "spec_snapshot_ref": NONEMPTY_STRING,
+            "catalog_hash": SHA,
+            "context_hash": SHA,
+        },
+    )
+    disposition_counts = strict_object(
+        ["EMITTED", "COMPILE_TIME_ONLY", "FOLDED", "EXPANDED", "DELEGATED", "REJECTED"],
+        {
+            status: {"type": "integer", "minimum": 0}
+            for status in (
+                "EMITTED",
+                "COMPILE_TIME_ONLY",
+                "FOLDED",
+                "EXPANDED",
+                "DELEGATED",
+                "REJECTED",
+            )
+        },
+    )
+    generated_artifact_v3_properties = {
+        "schema_id": {"const": "openpine.generated_artifact.v3"},
+        "schema_version": {"const": "3.0.0"},
+        "producer": producer_identity,
+        "bundle_hash": SHA,
+        "source_hash": SHA,
+        "version_context": version_context,
+        "catalog_hash": SHA,
+        "lowering_plan_hash": SHA,
+        "target_manifest_hash": SHA,
+        "emitted_module_hash": SHA,
+        "source_map_hash": SHA,
+        "entrypoint": strict_object(
+            ["module", "class"],
+            {
+                "module": {"type": "string", "pattern": r"^[A-Za-z_][A-Za-z0-9_]*$"},
+                "class": {"const": "GeneratedScript"},
+            },
+        ),
+        "required_operations": {
+            "type": "array",
+            "uniqueItems": True,
+            "items": NONEMPTY_STRING,
+        },
+        "required_capabilities": {
+            "type": "array",
+            "uniqueItems": True,
+            "items": NONEMPTY_STRING,
+        },
+        "import_manifest": {
+            "type": "array",
+            "uniqueItems": True,
+            "items": {
+                "type": "string",
+                "pattern": r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$",
+            },
+        },
+        "projection_proof": strict_object(
+            [
+                "disposition_counts",
+                "source_node_count",
+                "ir_node_count",
+                "source_map_entry_count",
+                "mapped_ir_count",
+                "mapped_ir_coverage",
+            ],
+            {
+                "disposition_counts": disposition_counts,
+                "source_node_count": {"type": "integer", "minimum": 0},
+                "ir_node_count": {"type": "integer", "minimum": 0},
+                "source_map_entry_count": {"type": "integer", "minimum": 0},
+                "mapped_ir_count": {"type": "integer", "minimum": 0},
+                "mapped_ir_coverage": {"type": "boolean"},
+            },
+        ),
+        "release_acceptance": strict_object(
+            ["pine2ast_rc6", "pinelib_rc6", "tradingview_oracle"],
+            {
+                "pine2ast_rc6": {"const": "EXACT_CORRECTED_BUNDLE_ACCEPTED"},
+                "pinelib_rc6": NONEMPTY_STRING,
+                "tradingview_oracle": {"const": "NOT_CLAIMED"},
+            },
+        ),
+        "content_hash": SHA,
+    }
+    write(
+        "openpine.generated_artifact.v3.json",
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "openpine.generated_artifact.v3",
+            **strict_object(
+                list(generated_artifact_v3_properties),
+                generated_artifact_v3_properties,
+            ),
+        },
+    )
+
     write(
         "openpine.runtime.v2.json",
         schema(
