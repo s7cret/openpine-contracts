@@ -135,11 +135,66 @@ def _validate_trial_identity_semantics(payload: Mapping[str, Any]) -> None:
             )
 
 
+def _validate_generated_artifact_v3_semantics(payload: Mapping[str, Any]) -> None:
+    version_context = payload.get("version_context")
+    if isinstance(version_context, Mapping):
+        if payload.get("catalog_hash") != version_context.get("catalog_hash"):
+            _semantic_error(
+                "openpine.generated_artifact.v3",
+                "CATALOG_HASH_MISMATCH",
+                "generated artifact catalog_hash must match version_context.catalog_hash",
+                ["catalog_hash"],
+            )
+    proof = payload.get("projection_proof")
+    if not isinstance(proof, Mapping):
+        return
+    counts = proof.get("disposition_counts")
+    if not isinstance(counts, Mapping):
+        return
+    rejected = counts.get("REJECTED")
+    if isinstance(rejected, int) and rejected > 0:
+        _semantic_error(
+            "openpine.generated_artifact.v3",
+            "PROJECTION_REJECTED",
+            "canonical generated artifact projection must not contain REJECTED nodes",
+            ["projection_proof", "disposition_counts", "REJECTED"],
+        )
+    if proof.get("mapped_ir_coverage") is not True:
+        _semantic_error(
+            "openpine.generated_artifact.v3",
+            "PROJECTION_COVERAGE",
+            "canonical generated artifact must prove mapped_ir_coverage",
+            ["projection_proof", "mapped_ir_coverage"],
+        )
+    mapped_ir_count = proof.get("mapped_ir_count")
+    source_map_entry_count = proof.get("source_map_entry_count")
+    if proof.get("mapped_ir_count") != proof.get("ir_node_count"):
+        _semantic_error(
+            "openpine.generated_artifact.v3",
+            "PROJECTION_IR_COUNT",
+            "mapped_ir_count must equal ir_node_count",
+            ["projection_proof", "mapped_ir_count"],
+        )
+    if (
+        isinstance(source_map_entry_count, int)
+        and isinstance(mapped_ir_count, int)
+        and source_map_entry_count < mapped_ir_count
+    ):
+        _semantic_error(
+            "openpine.generated_artifact.v3",
+            "PROJECTION_SOURCE_MAP",
+            "source_map_entry_count must cover mapped_ir_count",
+            ["projection_proof", "source_map_entry_count"],
+        )
+
+
 def _validate_semantics(schema_id: str, payload: Mapping[str, Any]) -> None:
     if schema_id == "openpine.intent.v2":
         _validate_intent_semantics(payload)
     elif schema_id == "openpine.trial.identity.v1":
         _validate_trial_identity_semantics(payload)
+    elif schema_id == "openpine.generated_artifact.v3":
+        _validate_generated_artifact_v3_semantics(payload)
 
 
 def validate_payload(schema_id: str, payload: Mapping[str, Any] | dict[str, Any]) -> None:

@@ -7,18 +7,30 @@
     "schema_id",
     "schema_version",
     "producer",
+    "build_identity",
     "bundle_hash",
     "source_hash",
     "version_context",
     "catalog_hash",
+    "ast_hash",
+    "semantic_facts_hash",
+    "node_index_hash",
+    "lowering_pack_id",
+    "lowering_pack_hash",
     "lowering_plan_hash",
     "target_manifest_hash",
+    "target_abi_id",
+    "target_abi_hash",
     "emitted_module_hash",
     "source_map_hash",
     "entrypoint",
     "required_operations",
     "required_capabilities",
     "import_manifest",
+    "import_manifest_hash",
+    "visual_projection_policy",
+    "external_library_dependency_hashes",
+    "build_determinism_identity",
     "projection_proof",
     "release_acceptance",
     "content_hash"
@@ -31,59 +43,53 @@
       "const": "3.0.0"
     },
     "producer": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "name",
-            "version",
-            "commit",
-            "source_state"
-          ],
-          "properties": {
-            "name": {
-              "const": "ast2python"
-            },
-            "version": {
-              "type": "string",
-              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
-            },
-            "commit": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{40}$"
-            },
-            "source_state": {
-              "const": "COMMIT_PINNED"
-            }
-          }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "commit",
+        "source_state"
+      ],
+      "properties": {
+        "name": {
+          "const": "ast2python"
         },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "name",
-            "version",
-            "commit",
-            "source_state"
-          ],
-          "properties": {
-            "name": {
-              "const": "ast2python"
-            },
-            "version": {
-              "type": "string",
-              "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
-            },
-            "commit": {
-              "type": "null"
-            },
-            "source_state": {
-              "const": "UNCOMMITTED_LOCAL_BUILD"
-            }
-          }
+        "version": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:rc[1-9][0-9]*)?$"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "source_state": {
+          "const": "COMMIT_PINNED"
         }
-      ]
+      }
+    },
+    "build_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build_manifest_hash",
+        "producer_wheel_hash",
+        "stack_manifest_hash"
+      ],
+      "properties": {
+        "build_manifest_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "producer_wheel_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "stack_manifest_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
     },
     "bundle_hash": {
       "type": "string",
@@ -179,11 +185,39 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
+    "ast_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "semantic_facts_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "node_index_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "lowering_pack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lowering_pack_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "lowering_plan_hash": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "target_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "target_abi_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_abi_hash": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
@@ -235,6 +269,24 @@
         "type": "string",
         "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*$"
       }
+    },
+    "import_manifest_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "visual_projection_policy": {
+      "const": "VISUAL_TAPE_REQUIRED"
+    },
+    "external_library_dependency_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "build_determinism_identity": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
     },
     "projection_proof": {
       "type": "object",
@@ -320,8 +372,7 @@
           "const": "EXACT_CORRECTED_BUNDLE_ACCEPTED"
         },
         "pinelib_rc6": {
-          "type": "string",
-          "minLength": 1
+          "const": "EXACT_PINELIB_TARGET_MANIFEST_V2"
         },
         "tradingview_oracle": {
           "const": "NOT_CLAIMED"

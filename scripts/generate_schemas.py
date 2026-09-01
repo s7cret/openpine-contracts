@@ -508,28 +508,23 @@ def main() -> None:
         },
     )
     producer_fields = ["name", "version", "commit", "source_state"]
-    producer_identity = {
-        "oneOf": [
-            strict_object(
-                producer_fields,
-                {
-                    "name": {"const": "ast2python"},
-                    "version": WHEEL_VERSION,
-                    "commit": GIT_SHA,
-                    "source_state": {"const": "COMMIT_PINNED"},
-                },
-            ),
-            strict_object(
-                producer_fields,
-                {
-                    "name": {"const": "ast2python"},
-                    "version": WHEEL_VERSION,
-                    "commit": {"type": "null"},
-                    "source_state": {"const": "UNCOMMITTED_LOCAL_BUILD"},
-                },
-            ),
-        ]
-    }
+    producer_identity = strict_object(
+        producer_fields,
+        {
+            "name": {"const": "ast2python"},
+            "version": WHEEL_VERSION,
+            "commit": GIT_SHA,
+            "source_state": {"const": "COMMIT_PINNED"},
+        },
+    )
+    build_identity = strict_object(
+        ["build_manifest_hash", "producer_wheel_hash", "stack_manifest_hash"],
+        {
+            "build_manifest_hash": SHA,
+            "producer_wheel_hash": SHA,
+            "stack_manifest_hash": SHA,
+        },
+    )
     version_context = strict_object(
         [
             "pine_version",
@@ -566,12 +561,20 @@ def main() -> None:
         "schema_id": {"const": "openpine.generated_artifact.v3"},
         "schema_version": {"const": "3.0.0"},
         "producer": producer_identity,
+        "build_identity": build_identity,
         "bundle_hash": SHA,
         "source_hash": SHA,
         "version_context": version_context,
         "catalog_hash": SHA,
+        "ast_hash": SHA,
+        "semantic_facts_hash": SHA,
+        "node_index_hash": SHA,
+        "lowering_pack_id": NONEMPTY_STRING,
+        "lowering_pack_hash": SHA,
         "lowering_plan_hash": SHA,
         "target_manifest_hash": SHA,
+        "target_abi_id": NONEMPTY_STRING,
+        "target_abi_hash": SHA,
         "emitted_module_hash": SHA,
         "source_map_hash": SHA,
         "entrypoint": strict_object(
@@ -599,6 +602,13 @@ def main() -> None:
                 "pattern": r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$",
             },
         },
+        "import_manifest_hash": SHA,
+        "visual_projection_policy": {"const": "VISUAL_TAPE_REQUIRED"},
+        "external_library_dependency_hashes": {
+            "type": "object",
+            "additionalProperties": SHA,
+        },
+        "build_determinism_identity": SHA,
         "projection_proof": strict_object(
             [
                 "disposition_counts",
@@ -621,7 +631,7 @@ def main() -> None:
             ["pine2ast_rc6", "pinelib_rc6", "tradingview_oracle"],
             {
                 "pine2ast_rc6": {"const": "EXACT_CORRECTED_BUNDLE_ACCEPTED"},
-                "pinelib_rc6": NONEMPTY_STRING,
+                "pinelib_rc6": {"const": "EXACT_PINELIB_TARGET_MANIFEST_V2"},
                 "tradingview_oracle": {"const": "NOT_CLAIMED"},
             },
         ),
