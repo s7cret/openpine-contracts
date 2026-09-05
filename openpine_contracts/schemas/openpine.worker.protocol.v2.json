@@ -250,6 +250,9 @@
         },
         "broker_projection": {
           "$ref": "openpine.broker_projection.v1"
+        },
+        "execution_event": {
+          "$ref": "openpine.execution_event.v1"
         }
       }
     },
@@ -357,6 +360,9 @@
         },
         "broker_projection": {
           "$ref": "openpine.broker_projection.v1"
+        },
+        "execution_event": {
+          "$ref": "openpine.execution_event.v1"
         }
       }
     },

@@ -11,6 +11,7 @@ from .errors import (
     SchemaValidatorUnavailableError,
     WorkerProtocolSemanticError,
 )
+from .execution import ExecutionEvent
 from .hashing import (
     SERIALIZER_ID,
     canonical_dumps,
@@ -46,6 +47,7 @@ __all__ = [
     "ContractError",
     "DECIMAL_POLICY",
     "Finality",
+    "ExecutionEvent",
     "IntentKind",
     "JobState",
     "Money",

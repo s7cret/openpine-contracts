@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.execution_event.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sequence",
+    "bar_index",
+    "last_bar_index",
+    "bar_open_time_utc_ms",
+    "tick_index",
+    "recalc_iteration",
+    "schema_id",
+    "last_historical_bar_index",
+    "phase",
+    "realtime",
+    "final_tick",
+    "cause",
+    "fill_order_id",
+    "fill_price"
+  ],
+  "properties": {
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "last_bar_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "bar_open_time_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tick_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "recalc_iteration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "schema_id": {
+      "const": "openpine.execution_event.v1"
+    },
+    "last_historical_bar_index": {
+      "type": "integer",
+      "minimum": -1
+    },
+    "phase": {
+      "enum": [
+        "HISTORICAL_EVAL",
+        "REALTIME_EVAL",
+        "ORDER_FILL_RECALC"
+      ]
+    },
+    "realtime": {
+      "type": "boolean"
+    },
+    "final_tick": {
+      "type": "boolean"
+    },
+    "cause": {
+      "enum": [
+        "BAR_CLOSE",
+        "TICK",
+        "ORDER_FILL"
+      ]
+    },
+    "fill_order_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "fill_price": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    }
+  }
+}
