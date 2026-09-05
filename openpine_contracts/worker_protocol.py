@@ -241,7 +241,7 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
     message_ids: set[str] = set()
     execution_context: Mapping[str, object] | None = None
     current_bar: dict[str, object] | None = None
-    last_intent_batch: tuple[object, object] | None = None
+    pending_recalc_batch: tuple[object, object] | None = None
     last_bar_commit: dict[str, object] | None = None
     checkpoints: dict[str, tuple[object, object, object, object, object]] = {}
 
@@ -562,25 +562,30 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                                     expected=execution_context.get("source_hash"),
                                     actual=source_span.get("source_hash"),
                                 )
-                if kind == "INTENT_BATCH":
-                    last_intent_batch = (message_id, body.get("intent_batch_hash"))
                 if kind == "RECALC_RESULT":
-                    expected_intent_binding = last_intent_batch
-                    actual_intent_binding = (
-                        body.get("intent_batch_message_id"),
-                        body.get("intent_batch_hash"),
+                    # Wire order is REQUEST -> RESULT -> INTENT_BATCH. Bind the
+                    # following result batch, never commands from the prior
+                    # callback (which can have a coincidentally equal hash).
+                    pending_recalc_batch = (
+                        body.get("intent_batch_message_id"), body.get("intent_batch_hash")
                     )
-                    if (
-                        expected_intent_binding is None
-                        or actual_intent_binding != expected_intent_binding
-                    ):
+                    if pending_recalc_batch[0] in message_ids:
                         _fail(
                             "RECALC_INTENT_BINDING_MISMATCH",
-                            "RECALC_RESULT must bind the specific preceding INTENT_BATCH",
+                            "RECALC_RESULT cannot bind an already observed batch",
                             index=index,
-                            expected=expected_intent_binding,
-                            actual=actual_intent_binding,
                         )
+                if kind == "INTENT_BATCH" and pending_recalc_batch is not None:
+                    actual_binding = (message_id, body.get("intent_batch_hash"))
+                    if actual_binding != pending_recalc_batch:
+                        _fail(
+                            "RECALC_INTENT_BINDING_MISMATCH",
+                            "RECALC_RESULT must bind the immediately following INTENT_BATCH",
+                            index=index,
+                            expected=pending_recalc_batch,
+                            actual=actual_binding,
+                        )
+                    pending_recalc_batch = None
                 if kind == "BROKER_EVENT_BATCH" and execution_context is not None:
                     broker_events = body.get("broker_events")
                     if isinstance(broker_events, list):

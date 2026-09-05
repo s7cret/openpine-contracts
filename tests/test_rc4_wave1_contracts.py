@@ -782,12 +782,6 @@ def _valid_worker_sequence() -> list[dict[str, Any]]:
     messages = [_worker_message(kind, index) for index, kind in enumerate(kinds)]
     second_intents = [_intent("close_all", recalc_iteration=1)]
     messages[7]["body"] = deepcopy(WORKER_BODIES["RECALC_RESULT"])
-    messages[7]["body"].update(
-        {
-            "intent_batch_message_id": "msg-4",
-            "intent_batch_hash": WORKER_BODIES["INTENT_BATCH"]["intent_batch_hash"],
-        }
-    )
     messages[8]["body"] = dict(
         WORKER_BODIES["INTENT_BATCH"],
         recalc_iteration=1,
@@ -797,6 +791,10 @@ def _valid_worker_sequence() -> list[dict[str, Any]]:
             batch_kind="INTENT_BATCH",
             item_schema_id="openpine.intent.v2",
         ),
+    )
+    messages[7]["body"].update(
+        intent_batch_message_id="msg-8",
+        intent_batch_hash=messages[8]["body"]["intent_batch_hash"],
     )
     messages[9]["body"] = deepcopy(WORKER_BODIES["BAR_COMMIT"])
     messages[9]["body"]["recalc_iteration"] = 1
@@ -1647,3 +1645,20 @@ def test_schema_generation_is_deterministic_and_idempotent(tmp_path: Path) -> No
 
     assert first == second
     assert first == committed
+
+
+@pytest.mark.parametrize("fault", ["old_batch", "wrong_id", "wrong_hash"])
+def test_recalc_result_binds_following_not_previous_batch(fault):
+    messages = _valid_worker_sequence()
+    body = messages[7]["body"]
+    if fault == "old_batch":
+        body["intent_batch_message_id"] = messages[4]["message_id"]
+        body["intent_batch_hash"] = messages[4]["body"]["intent_batch_hash"]
+    elif fault == "wrong_id":
+        body["intent_batch_message_id"] = "not-the-next-message"
+    else:
+        body["intent_batch_hash"] = messages[4]["body"]["intent_batch_hash"]
+    messages[7] = contracts.seal_content_hash(messages[7], schema_id="openpine.worker.protocol.v2")
+    with pytest.raises(contracts.WorkerProtocolSemanticError) as error:
+        contracts.validate_worker_protocol_sequence(messages)
+    assert error.value.details["reason"] == "RECALC_INTENT_BINDING_MISMATCH"
