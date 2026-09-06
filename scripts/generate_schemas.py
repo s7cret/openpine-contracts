@@ -290,6 +290,36 @@ def with_all_entry_exit_scope(payload: dict) -> dict:
     return payload
 
 
+def with_exit_price_pair_policy(payload: dict) -> dict:
+    """Version mixed TP/SL selection; old records retain absolute precedence.
+
+    Only exits gain 2.4.0, with an explicit first-trigger policy and exactly one
+    target scope. An absent policy in older records never implies Pine v6.
+    """
+    versions = {"enum": ["2.2.0", "2.3.0", "2.4.0"]}
+    policy = {"const": "first_trigger"}
+    payload["properties"].update(schema_version=versions, price_pair_policy=policy)
+    exit_schema = payload["$defs"]["ExitIntent"]
+    exit_schema["properties"].update(schema_version=versions, price_pair_policy=policy)
+    exit_schema["allOf"].append({
+        "if": {"properties": {"schema_version": {"const": "2.4.0"}}},
+        "then": {
+            "required": ["price_pair_policy"],
+            "oneOf": [
+                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+            ],
+            "anyOf": [
+                {"required": list(pair),
+                 "properties": {name: {"type": "string"} for name in pair}}
+                for pair in (("profit", "limit"), ("loss", "stop"))
+            ],
+        },
+        "else": {"not": {"required": ["price_pair_policy"]}},
+    })
+    return payload
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -1200,7 +1230,7 @@ def main() -> None:
     }
     write(
         "openpine.intent.v2.json",
-        with_all_entry_exit_scope(rc4_schema(
+        with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
             "openpine.intent.v2",
             "2.2.0",
             required=intent_common_required,
@@ -1273,7 +1303,7 @@ def main() -> None:
                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
                 ]
             },
-        )),
+        ))),
     )
 
     write(

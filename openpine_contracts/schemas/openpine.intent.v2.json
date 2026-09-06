@@ -38,7 +38,8 @@
     "schema_version": {
       "enum": [
         "2.2.0",
-        "2.3.0"
+        "2.3.0",
+        "2.4.0"
       ]
     },
     "producer": {
@@ -299,6 +300,9 @@
     },
     "exit_scope": {
       "const": "all_entries"
+    },
+    "price_pair_policy": {
+      "const": "first_trigger"
     }
   },
   "$defs": {
@@ -842,7 +846,8 @@
         "schema_version": {
           "enum": [
             "2.2.0",
-            "2.3.0"
+            "2.3.0",
+            "2.4.0"
           ]
         },
         "producer": {
@@ -1062,6 +1067,9 @@
         },
         "exit_scope": {
           "const": "all_entries"
+        },
+        "price_pair_policy": {
+          "const": "first_trigger"
         }
       },
       "allOf": [
@@ -1099,6 +1107,79 @@
             "not": {
               "required": [
                 "from_entry"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "2.4.0"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "price_pair_policy"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "from_entry"
+                ],
+                "not": {
+                  "required": [
+                    "exit_scope"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "exit_scope"
+                ],
+                "not": {
+                  "required": [
+                    "from_entry"
+                  ]
+                }
+              }
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "profit",
+                  "limit"
+                ],
+                "properties": {
+                  "profit": {
+                    "type": "string"
+                  },
+                  "limit": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "loss",
+                  "stop"
+                ],
+                "properties": {
+                  "loss": {
+                    "type": "string"
+                  },
+                  "stop": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "price_pair_policy"
               ]
             }
           }
