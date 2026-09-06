@@ -36,7 +36,10 @@
       "const": "openpine.intent.v2"
     },
     "schema_version": {
-      "const": "2.2.0"
+      "enum": [
+        "2.2.0",
+        "2.3.0"
+      ]
     },
     "producer": {
       "type": "string",
@@ -293,6 +296,9 @@
     "risk_scope": {
       "type": "string",
       "minLength": 1
+    },
+    "exit_scope": {
+      "const": "all_entries"
     }
   },
   "$defs": {
@@ -827,15 +833,17 @@
         "semantic_profile",
         "source_span",
         "idempotency_key",
-        "order_id",
-        "from_entry"
+        "order_id"
       ],
       "properties": {
         "schema_id": {
           "const": "openpine.intent.v2"
         },
         "schema_version": {
-          "const": "2.2.0"
+          "enum": [
+            "2.2.0",
+            "2.3.0"
+          ]
         },
         "producer": {
           "type": "string",
@@ -1051,8 +1059,51 @@
         },
         "disable_alert": {
           "type": "boolean"
+        },
+        "exit_scope": {
+          "const": "all_entries"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "2.2.0"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "from_entry"
+            ],
+            "not": {
+              "required": [
+                "exit_scope"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "2.3.0"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "exit_scope"
+            ],
+            "not": {
+              "required": [
+                "from_entry"
+              ]
+            }
+          }
+        }
+      ]
     },
     "CloseIntent": {
       "type": "object",

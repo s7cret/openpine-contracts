@@ -269,6 +269,27 @@ def write(name: str, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def with_all_entry_exit_scope(payload: dict) -> dict:
+    """Extend exit wire semantics explicitly; keep every 2.2 identity mandatory.
+
+    Version 2.3 is reserved for all-entry exits. A missing 2.2 from_entry remains
+    invalid and no literal user entry ID (including '*') becomes a wildcard.
+    """
+    payload["properties"]["schema_version"] = {"enum": ["2.2.0", "2.3.0"]}
+    payload["properties"]["exit_scope"] = {"const": "all_entries"}
+    exit_schema = payload["$defs"]["ExitIntent"]
+    exit_schema["required"].remove("from_entry")
+    exit_schema["properties"]["schema_version"] = {"enum": ["2.2.0", "2.3.0"]}
+    exit_schema["properties"]["exit_scope"] = {"const": "all_entries"}
+    exit_schema["allOf"] = [
+        {"if": {"properties": {"schema_version": {"const": "2.2.0"}}},
+         "then": {"required": ["from_entry"], "not": {"required": ["exit_scope"]}}},
+        {"if": {"properties": {"schema_version": {"const": "2.3.0"}}},
+         "then": {"required": ["exit_scope"], "not": {"required": ["from_entry"]}}},
+    ]
+    return payload
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -1179,7 +1200,7 @@ def main() -> None:
     }
     write(
         "openpine.intent.v2.json",
-        rc4_schema(
+        with_all_entry_exit_scope(rc4_schema(
             "openpine.intent.v2",
             "2.2.0",
             required=intent_common_required,
@@ -1252,7 +1273,7 @@ def main() -> None:
                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
                 ]
             },
-        ),
+        )),
     )
 
     write(
