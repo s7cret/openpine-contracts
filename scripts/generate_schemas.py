@@ -320,6 +320,45 @@ def with_exit_price_pair_policy(payload: dict) -> dict:
     return payload
 
 
+
+def with_trailing_exit_policy(payload: dict) -> dict:
+    """2.5 explicitly carries trail activation policy; old wire versions stay exact.
+
+    Fixed stop/trail competition is not admitted by this new bridge subset.
+    Trailing alone or alongside a take-profit has one unambiguous stop leg.
+    """
+    versions = {"enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0"]}
+    policy = {"enum": ["absolute_first", "first_trigger"]}
+    payload["properties"].update(schema_version=versions, price_pair_policy=policy)
+    exit_schema = payload["$defs"]["ExitIntent"]
+    exit_schema["properties"].update(schema_version=versions, price_pair_policy=policy)
+    prior = exit_schema["allOf"][-1]
+    prior["then"]["properties"] = {"price_pair_policy": {"const": "first_trigger"}}
+    prior["else"] = {
+        "if": {"properties": {"schema_version": {"not": {"const": "2.5.0"}}}},
+        "then": {"not": {"required": ["price_pair_policy"]}},
+    }
+    exit_schema["allOf"].append({
+        "if": {"properties": {"schema_version": {"const": "2.5.0"}}},
+        "then": {
+            "required": ["price_pair_policy", "trail_offset"],
+            "properties": {
+                "trail_offset": {"type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"},
+                "stop": {"type": "null"}, "loss": {"type": "null"},
+            },
+            "oneOf": [
+                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+            ],
+            "anyOf": [
+                {"required": [name], "properties": {name: {"type": "string"}}}
+                for name in ("trail_price", "trail_points")
+            ],
+        },
+    })
+    return payload
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -1230,7 +1269,7 @@ def main() -> None:
     }
     write(
         "openpine.intent.v2.json",
-        with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
+        with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
             "openpine.intent.v2",
             "2.2.0",
             required=intent_common_required,
@@ -1303,7 +1342,7 @@ def main() -> None:
                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
                 ]
             },
-        ))),
+        )))),
     )
 
     write(
