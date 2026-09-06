@@ -1,0 +1,514 @@
+diff --git a/openpine_contracts/schemas/openpine.intent.v2.json b/openpine_contracts/schemas/openpine.intent.v2.json
+index e62b1b89c8da053ae4aa65402516faea4d929c60..794404578040a17918a70e7b2bcabf3ec12b420f 100644
+--- a/openpine_contracts/schemas/openpine.intent.v2.json
++++ b/openpine_contracts/schemas/openpine.intent.v2.json
+@@ -40,7 +40,8 @@
+         "2.2.0",
+         "2.3.0",
+         "2.4.0",
+-        "2.5.0"
++        "2.5.0",
++        "2.6.0"
+       ]
+     },
+     "producer": {
+@@ -307,6 +308,24 @@
+         "absolute_first",
+         "first_trigger"
+       ]
++    },
++    "comment_profit": {
++      "type": "string"
++    },
++    "comment_loss": {
++      "type": "string"
++    },
++    "comment_trailing": {
++      "type": "string"
++    },
++    "alert_profit": {
++      "type": "string"
++    },
++    "alert_loss": {
++      "type": "string"
++    },
++    "alert_trailing": {
++      "type": "string"
+     }
+   },
+   "$defs": {
+@@ -852,7 +871,8 @@
+             "2.2.0",
+             "2.3.0",
+             "2.4.0",
+-            "2.5.0"
++            "2.5.0",
++            "2.6.0"
+           ]
+         },
+         "producer": {
+@@ -1078,6 +1098,24 @@
+             "absolute_first",
+             "first_trigger"
+           ]
++        },
++        "comment_profit": {
++          "type": "string"
++        },
++        "comment_loss": {
++          "type": "string"
++        },
++        "comment_trailing": {
++          "type": "string"
++        },
++        "alert_profit": {
++          "type": "string"
++        },
++        "alert_loss": {
++          "type": "string"
++        },
++        "alert_trailing": {
++          "type": "string"
+         }
+       },
+       "allOf": [
+@@ -1194,7 +1232,10 @@
+               "properties": {
+                 "schema_version": {
+                   "not": {
+-                    "const": "2.5.0"
++                    "enum": [
++                      "2.5.0",
++                      "2.6.0"
++                    ]
+                   }
+                 }
+               }
+@@ -1278,6 +1319,211 @@
+               }
+             ]
+           }
++        },
++        {
++          "if": {
++            "properties": {
++              "schema_version": {
++                "const": "2.6.0"
++              }
++            }
++          },
++          "then": {
++            "required": [
++              "price_pair_policy"
++            ],
++            "oneOf": [
++              {
++                "required": [
++                  "from_entry"
++                ],
++                "not": {
++                  "required": [
++                    "exit_scope"
++                  ]
++                }
++              },
++              {
++                "required": [
++                  "exit_scope"
++                ],
++                "not": {
++                  "required": [
++                    "from_entry"
++                  ]
++                }
++              }
++            ],
++            "anyOf": [
++              {
++                "required": [
++                  "profit"
++                ],
++                "properties": {
++                  "profit": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "limit"
++                ],
++                "properties": {
++                  "limit": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "loss"
++                ],
++                "properties": {
++                  "loss": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "stop"
++                ],
++                "properties": {
++                  "stop": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "trail_price"
++                ],
++                "properties": {
++                  "trail_price": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "trail_points"
++                ],
++                "properties": {
++                  "trail_points": {
++                    "type": "string"
++                  }
++                }
++              }
++            ],
++            "allOf": [
++              {
++                "if": {
++                  "anyOf": [
++                    {
++                      "required": [
++                        "trail_price"
++                      ],
++                      "properties": {
++                        "trail_price": {
++                          "type": "string"
++                        }
++                      }
++                    },
++                    {
++                      "required": [
++                        "trail_points"
++                      ],
++                      "properties": {
++                        "trail_points": {
++                          "type": "string"
++                        }
++                      }
++                    },
++                    {
++                      "required": [
++                        "trail_offset"
++                      ],
++                      "properties": {
++                        "trail_offset": {
++                          "type": "string"
++                        }
++                      }
++                    }
++                  ]
++                },
++                "then": {
++                  "required": [
++                    "trail_offset"
++                  ],
++                  "properties": {
++                    "trail_offset": {
++                      "type": "string",
++                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
++                    }
++                  },
++                  "anyOf": [
++                    {
++                      "required": [
++                        "trail_price"
++                      ],
++                      "properties": {
++                        "trail_price": {
++                          "type": "string"
++                        }
++                      }
++                    },
++                    {
++                      "required": [
++                        "trail_points"
++                      ],
++                      "properties": {
++                        "trail_points": {
++                          "type": "string"
++                        }
++                      }
++                    }
++                  ]
++                }
++              }
++            ]
++          },
++          "else": {
++            "not": {
++              "anyOf": [
++                {
++                  "required": [
++                    "comment_profit"
++                  ]
++                },
++                {
++                  "required": [
++                    "comment_loss"
++                  ]
++                },
++                {
++                  "required": [
++                    "comment_trailing"
++                  ]
++                },
++                {
++                  "required": [
++                    "alert_profit"
++                  ]
++                },
++                {
++                  "required": [
++                    "alert_loss"
++                  ]
++                },
++                {
++                  "required": [
++                    "alert_trailing"
++                  ]
++                }
++              ]
++            }
++          }
+         }
+       ]
+     },
+diff --git a/scripts/generate_schemas.py b/scripts/generate_schemas.py
+index 61e00528e7333299486400c212f94c84b612832e..7e416cfa0812791983c36df13362c57064a26849 100644
+--- a/scripts/generate_schemas.py
++++ b/scripts/generate_schemas.py
+@@ -359,6 +359,53 @@ def with_trailing_exit_policy(payload: dict) -> dict:
+     return payload
+ 
+ 
++def with_exit_completion(payload: dict) -> dict:
++    """2.6 adds a composite stop and executed-leg metadata without weakening 2.2-2.5.
++
++    Readers must understand this version before admitting per-leg fields or a
++    combined fixed/trailing guard. There is always exactly one exit target scope.
++    """
++    versions = {"enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.6.0"]}
++    payload["properties"]["schema_version"] = versions
++    exit_schema = payload["$defs"]["ExitIntent"]
++    exit_schema["properties"]["schema_version"] = versions
++    fields = tuple(f"{prefix}_{leg}" for prefix in ("comment", "alert")
++                   for leg in ("profit", "loss", "trailing"))
++    for name in fields:
++        payload["properties"][name] = {"type": "string"}
++        exit_schema["properties"][name] = {"type": "string"}
++    # The 2.4 rule forbids price_pair_policy outside versions that understand it.
++    exit_schema["allOf"][2]["else"]["if"]["properties"]["schema_version"] = {
++        "not": {"enum": ["2.5.0", "2.6.0"]}
++    }
++    def active(names: tuple[str, ...]) -> dict:
++        return {"anyOf": [{"required": [name], "properties": {name: {"type": "string"}}}
++                          for name in names]}
++    exit_schema["allOf"].append({
++        "if": {"properties": {"schema_version": {"const": "2.6.0"}}},
++        "then": {
++            "required": ["price_pair_policy"],
++            "oneOf": [
++                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
++                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
++            ],
++            **active(("profit", "limit", "loss", "stop", "trail_price", "trail_points")),
++            "allOf": [{
++                "if": active(("trail_price", "trail_points", "trail_offset")),
++                "then": {
++                    "required": ["trail_offset"],
++                    "properties": {"trail_offset": {
++                        "type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"
++                    }},
++                    **active(("trail_price", "trail_points")),
++                },
++            }],
++        },
++        "else": {"not": {"anyOf": [{"required": [name]} for name in fields]}},
++    })
++    return payload
++
++
+ def main() -> None:
+     OUT.mkdir(parents=True, exist_ok=True)
+ 
+@@ -1269,7 +1316,7 @@ def main() -> None:
+     }
+     write(
+         "openpine.intent.v2.json",
+-        with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
++        with_exit_completion(with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
+             "openpine.intent.v2",
+             "2.2.0",
+             required=intent_common_required,
+@@ -1342,7 +1389,7 @@ def main() -> None:
+                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
+                 ]
+             },
+-        )))),
++        ))))),
+     )
+ 
+     write(
+diff --git a/tests/test_exit_completion.py b/tests/test_exit_completion.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..92ecc617f8a2a7ff3912ed38be6622aedb5311fb
+--- /dev/null
++++ b/tests/test_exit_completion.py
+@@ -0,0 +1,134 @@
++"""Versioned composite exits and per-leg messages, preserving all older readers."""
++
++import pytest
++from test_rc3_contracts import _intent
++
++from openpine_contracts import (
++    SchemaValidationError,
++    seal_content_hash,
++    validate_payload,
++    verify_content_hash,
++)
++
++
++def event(scope="named", **kwargs):
++    return _intent(
++        "exit",
++        schema_version="2.6.0",
++        order_id="X",
++        price_pair_policy="first_trigger",
++        **({"from_entry": "A"} if scope == "named" else {"exit_scope": "all_entries"}),
++        **kwargs,
++    )
++
++
++@pytest.mark.parametrize("scope", ["named", "all"])
++@pytest.mark.parametrize("policy", ["absolute_first", "first_trigger"])
++@pytest.mark.parametrize(
++    "prices",
++    [
++        {"stop": "95", "trail_price": "105", "trail_offset": "2"},
++        {
++            "profit": "10",
++            "limit": "110",
++            "loss": "5",
++            "stop": "95",
++            "trail_points": "5",
++            "trail_offset": "0",
++        },
++        {"limit": "110", "comment_profit": "", "alert_profit": "exact"},
++        {"stop": "95", "comment_loss": "stop", "alert_loss": ""},
++        {
++            "trail_points": "5",
++            "trail_offset": "2",
++            "comment_trailing": "trail",
++            "alert_trailing": "event",
++        },
++    ],
++)
++def test_unambiguous_exit_roundtrip(scope, policy, prices):
++    value = event(scope, **prices)
++    value["price_pair_policy"] = policy
++    value = seal_content_hash(value, schema_id="openpine.intent.v2")
++    validate_payload("openpine.intent.v2", value)
++    assert verify_content_hash(value, schema_id="openpine.intent.v2")
++
++
++@pytest.mark.parametrize(
++    "fault",
++    [
++        "policy",
++        "scope",
++        "both",
++        "empty",
++        "offset",
++        "negative",
++        "null_offset",
++        "activation",
++        "metadata_type",
++        "metadata_null",
++        "wrong_kind",
++    ],
++)
++def test_incomplete_or_ambiguous_exit_rejected(fault):
++    value = event(stop="95", trail_price="105", trail_offset="2", comment_loss="sl")
++    if fault == "policy":
++        value.pop("price_pair_policy")
++    if fault == "scope":
++        value.pop("from_entry")
++    if fault == "both":
++        value["exit_scope"] = "all_entries"
++    if fault == "empty":
++        for k in ("stop", "trail_price", "trail_offset"):
++            value.pop(k)
++    if fault == "offset":
++        value.pop("trail_offset")
++    if fault == "negative":
++        value["trail_offset"] = "-1"
++    if fault == "null_offset":
++        value["trail_offset"] = None
++    if fault == "activation":
++        value.pop("trail_price")
++    if fault == "metadata_type":
++        value["comment_loss"] = 42
++    if fault == "metadata_null":
++        value["alert_loss"] = None
++    if fault == "wrong_kind":
++        value["kind"] = "entry"
++    with pytest.raises(SchemaValidationError):
++        validate_payload("openpine.intent.v2", value)
++
++
++@pytest.mark.parametrize("version", ["2.2.0", "2.3.0", "2.4.0", "2.5.0"])
++@pytest.mark.parametrize(
++    "field",
++    [
++        "comment_profit",
++        "comment_loss",
++        "comment_trailing",
++        "alert_profit",
++        "alert_loss",
++        "alert_trailing",
++    ],
++)
++def test_old_wire_does_not_silently_accept_new_metadata(version, field):
++    values = {"profit": "5", "limit": "110"}
++    if version == "2.5.0":
++        values = {"trail_points": "5", "trail_offset": "2"}
++    value = event("all" if version == "2.3.0" else "named", **values)
++    value["schema_version"] = version
++    if version in {"2.2.0", "2.3.0"}:
++        value.pop("price_pair_policy")
++    validate_payload("openpine.intent.v2", value)
++    value[field] = "new"
++    with pytest.raises(SchemaValidationError):
++        validate_payload("openpine.intent.v2", value)
++
++
++def test_old_trailing_subset_remains_strict():
++    value = event(trail_price="105", trail_offset="2")
++    value["schema_version"] = "2.5.0"
++    validate_payload("openpine.intent.v2", value)
++    value["stop"] = "95"
++    with pytest.raises(SchemaValidationError):
++        validate_payload("openpine.intent.v2", value)
