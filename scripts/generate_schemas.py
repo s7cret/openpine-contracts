@@ -359,6 +359,53 @@ def with_trailing_exit_policy(payload: dict) -> dict:
     return payload
 
 
+def with_exit_completion(payload: dict) -> dict:
+    """2.6 adds a composite stop and executed-leg metadata without weakening 2.2-2.5.
+
+    Readers must understand this version before admitting per-leg fields or a
+    combined fixed/trailing guard. There is always exactly one exit target scope.
+    """
+    versions = {"enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.6.0"]}
+    payload["properties"]["schema_version"] = versions
+    exit_schema = payload["$defs"]["ExitIntent"]
+    exit_schema["properties"]["schema_version"] = versions
+    fields = tuple(f"{prefix}_{leg}" for prefix in ("comment", "alert")
+                   for leg in ("profit", "loss", "trailing"))
+    for name in fields:
+        payload["properties"][name] = {"type": "string"}
+        exit_schema["properties"][name] = {"type": "string"}
+    # The 2.4 rule forbids price_pair_policy outside versions that understand it.
+    exit_schema["allOf"][2]["else"]["if"]["properties"]["schema_version"] = {
+        "not": {"enum": ["2.5.0", "2.6.0"]}
+    }
+    def active(names: tuple[str, ...]) -> dict:
+        return {"anyOf": [{"required": [name], "properties": {name: {"type": "string"}}}
+                          for name in names]}
+    exit_schema["allOf"].append({
+        "if": {"properties": {"schema_version": {"const": "2.6.0"}}},
+        "then": {
+            "required": ["price_pair_policy"],
+            "oneOf": [
+                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+            ],
+            **active(("profit", "limit", "loss", "stop", "trail_price", "trail_points")),
+            "allOf": [{
+                "if": active(("trail_price", "trail_points", "trail_offset")),
+                "then": {
+                    "required": ["trail_offset"],
+                    "properties": {"trail_offset": {
+                        "type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"
+                    }},
+                    **active(("trail_price", "trail_points")),
+                },
+            }],
+        },
+        "else": {"not": {"anyOf": [{"required": [name]} for name in fields]}},
+    })
+    return payload
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -1269,7 +1316,7 @@ def main() -> None:
     }
     write(
         "openpine.intent.v2.json",
-        with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
+        with_exit_completion(with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
             "openpine.intent.v2",
             "2.2.0",
             required=intent_common_required,
@@ -1342,7 +1389,7 @@ def main() -> None:
                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
                 ]
             },
-        )))),
+        ))))),
     )
 
     write(

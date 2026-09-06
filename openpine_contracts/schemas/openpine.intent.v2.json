@@ -40,7 +40,8 @@
         "2.2.0",
         "2.3.0",
         "2.4.0",
-        "2.5.0"
+        "2.5.0",
+        "2.6.0"
       ]
     },
     "producer": {
@@ -307,6 +308,24 @@
         "absolute_first",
         "first_trigger"
       ]
+    },
+    "comment_profit": {
+      "type": "string"
+    },
+    "comment_loss": {
+      "type": "string"
+    },
+    "comment_trailing": {
+      "type": "string"
+    },
+    "alert_profit": {
+      "type": "string"
+    },
+    "alert_loss": {
+      "type": "string"
+    },
+    "alert_trailing": {
+      "type": "string"
     }
   },
   "$defs": {
@@ -852,7 +871,8 @@
             "2.2.0",
             "2.3.0",
             "2.4.0",
-            "2.5.0"
+            "2.5.0",
+            "2.6.0"
           ]
         },
         "producer": {
@@ -1078,6 +1098,24 @@
             "absolute_first",
             "first_trigger"
           ]
+        },
+        "comment_profit": {
+          "type": "string"
+        },
+        "comment_loss": {
+          "type": "string"
+        },
+        "comment_trailing": {
+          "type": "string"
+        },
+        "alert_profit": {
+          "type": "string"
+        },
+        "alert_loss": {
+          "type": "string"
+        },
+        "alert_trailing": {
+          "type": "string"
         }
       },
       "allOf": [
@@ -1194,7 +1232,10 @@
               "properties": {
                 "schema_version": {
                   "not": {
-                    "const": "2.5.0"
+                    "enum": [
+                      "2.5.0",
+                      "2.6.0"
+                    ]
                   }
                 }
               }
@@ -1277,6 +1318,211 @@
                 }
               }
             ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "schema_version": {
+                "const": "2.6.0"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "price_pair_policy"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "from_entry"
+                ],
+                "not": {
+                  "required": [
+                    "exit_scope"
+                  ]
+                }
+              },
+              {
+                "required": [
+                  "exit_scope"
+                ],
+                "not": {
+                  "required": [
+                    "from_entry"
+                  ]
+                }
+              }
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "profit"
+                ],
+                "properties": {
+                  "profit": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "limit"
+                ],
+                "properties": {
+                  "limit": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "loss"
+                ],
+                "properties": {
+                  "loss": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "stop"
+                ],
+                "properties": {
+                  "stop": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "trail_price"
+                ],
+                "properties": {
+                  "trail_price": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "trail_points"
+                ],
+                "properties": {
+                  "trail_points": {
+                    "type": "string"
+                  }
+                }
+              }
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "trail_price"
+                      ],
+                      "properties": {
+                        "trail_price": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "required": [
+                        "trail_points"
+                      ],
+                      "properties": {
+                        "trail_points": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "required": [
+                        "trail_offset"
+                      ],
+                      "properties": {
+                        "trail_offset": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "trail_offset"
+                  ],
+                  "properties": {
+                    "trail_offset": {
+                      "type": "string",
+                      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                    }
+                  },
+                  "anyOf": [
+                    {
+                      "required": [
+                        "trail_price"
+                      ],
+                      "properties": {
+                        "trail_price": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "required": [
+                        "trail_points"
+                      ],
+                      "properties": {
+                        "trail_points": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "comment_profit"
+                  ]
+                },
+                {
+                  "required": [
+                    "comment_loss"
+                  ]
+                },
+                {
+                  "required": [
+                    "comment_trailing"
+                  ]
+                },
+                {
+                  "required": [
+                    "alert_profit"
+                  ]
+                },
+                {
+                  "required": [
+                    "alert_loss"
+                  ]
+                },
+                {
+                  "required": [
+                    "alert_trailing"
+                  ]
+                }
+              ]
+            }
           }
         }
       ]
