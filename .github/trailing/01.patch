@@ -1,0 +1,317 @@
+diff --git a/openpine_contracts/schemas/openpine.intent.v2.json b/openpine_contracts/schemas/openpine.intent.v2.json
+index 8dfe47be8b3014dba90deaf350c153000b814238..e62b1b89c8da053ae4aa65402516faea4d929c60 100644
+--- a/openpine_contracts/schemas/openpine.intent.v2.json
++++ b/openpine_contracts/schemas/openpine.intent.v2.json
+@@ -39,7 +39,8 @@
+       "enum": [
+         "2.2.0",
+         "2.3.0",
+-        "2.4.0"
++        "2.4.0",
++        "2.5.0"
+       ]
+     },
+     "producer": {
+@@ -302,7 +303,10 @@
+       "const": "all_entries"
+     },
+     "price_pair_policy": {
+-      "const": "first_trigger"
++      "enum": [
++        "absolute_first",
++        "first_trigger"
++      ]
+     }
+   },
+   "$defs": {
+@@ -847,7 +851,8 @@
+           "enum": [
+             "2.2.0",
+             "2.3.0",
+-            "2.4.0"
++            "2.4.0",
++            "2.5.0"
+           ]
+         },
+         "producer": {
+@@ -1069,7 +1074,10 @@
+           "const": "all_entries"
+         },
+         "price_pair_policy": {
+-          "const": "first_trigger"
++          "enum": [
++            "absolute_first",
++            "first_trigger"
++          ]
+         }
+       },
+       "allOf": [
+@@ -1174,14 +1182,101 @@
+                   }
+                 }
+               }
+-            ]
++            ],
++            "properties": {
++              "price_pair_policy": {
++                "const": "first_trigger"
++              }
++            }
+           },
+           "else": {
+-            "not": {
+-              "required": [
+-                "price_pair_policy"
+-              ]
++            "if": {
++              "properties": {
++                "schema_version": {
++                  "not": {
++                    "const": "2.5.0"
++                  }
++                }
++              }
++            },
++            "then": {
++              "not": {
++                "required": [
++                  "price_pair_policy"
++                ]
++              }
++            }
++          }
++        },
++        {
++          "if": {
++            "properties": {
++              "schema_version": {
++                "const": "2.5.0"
++              }
+             }
++          },
++          "then": {
++            "required": [
++              "price_pair_policy",
++              "trail_offset"
++            ],
++            "properties": {
++              "trail_offset": {
++                "type": "string",
++                "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
++              },
++              "stop": {
++                "type": "null"
++              },
++              "loss": {
++                "type": "null"
++              }
++            },
++            "oneOf": [
++              {
++                "required": [
++                  "from_entry"
++                ],
++                "not": {
++                  "required": [
++                    "exit_scope"
++                  ]
++                }
++              },
++              {
++                "required": [
++                  "exit_scope"
++                ],
++                "not": {
++                  "required": [
++                    "from_entry"
++                  ]
++                }
++              }
++            ],
++            "anyOf": [
++              {
++                "required": [
++                  "trail_price"
++                ],
++                "properties": {
++                  "trail_price": {
++                    "type": "string"
++                  }
++                }
++              },
++              {
++                "required": [
++                  "trail_points"
++                ],
++                "properties": {
++                  "trail_points": {
++                    "type": "string"
++                  }
++                }
++              }
++            ]
+           }
+         }
+       ]
+diff --git a/scripts/generate_schemas.py b/scripts/generate_schemas.py
+index 554a7bf0bf0df83261d3f632ded997be492a2cca..61e00528e7333299486400c212f94c84b612832e 100644
+--- a/scripts/generate_schemas.py
++++ b/scripts/generate_schemas.py
+@@ -320,6 +320,45 @@ def with_exit_price_pair_policy(payload: dict) -> dict:
+     return payload
+ 
+ 
++
++def with_trailing_exit_policy(payload: dict) -> dict:
++    """2.5 explicitly carries trail activation policy; old wire versions stay exact.
++
++    Fixed stop/trail competition is not admitted by this new bridge subset.
++    Trailing alone or alongside a take-profit has one unambiguous stop leg.
++    """
++    versions = {"enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0"]}
++    policy = {"enum": ["absolute_first", "first_trigger"]}
++    payload["properties"].update(schema_version=versions, price_pair_policy=policy)
++    exit_schema = payload["$defs"]["ExitIntent"]
++    exit_schema["properties"].update(schema_version=versions, price_pair_policy=policy)
++    prior = exit_schema["allOf"][-1]
++    prior["then"]["properties"] = {"price_pair_policy": {"const": "first_trigger"}}
++    prior["else"] = {
++        "if": {"properties": {"schema_version": {"not": {"const": "2.5.0"}}}},
++        "then": {"not": {"required": ["price_pair_policy"]}},
++    }
++    exit_schema["allOf"].append({
++        "if": {"properties": {"schema_version": {"const": "2.5.0"}}},
++        "then": {
++            "required": ["price_pair_policy", "trail_offset"],
++            "properties": {
++                "trail_offset": {"type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"},
++                "stop": {"type": "null"}, "loss": {"type": "null"},
++            },
++            "oneOf": [
++                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
++                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
++            ],
++            "anyOf": [
++                {"required": [name], "properties": {name: {"type": "string"}}}
++                for name in ("trail_price", "trail_points")
++            ],
++        },
++    })
++    return payload
++
++
+ def main() -> None:
+     OUT.mkdir(parents=True, exist_ok=True)
+ 
+@@ -1230,7 +1269,7 @@ def main() -> None:
+     }
+     write(
+         "openpine.intent.v2.json",
+-        with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
++        with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
+             "openpine.intent.v2",
+             "2.2.0",
+             required=intent_common_required,
+@@ -1303,7 +1342,7 @@ def main() -> None:
+                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
+                 ]
+             },
+-        ))),
++        )))),
+     )
+ 
+     write(
+diff --git a/tests/test_trailing_exit_policy.py b/tests/test_trailing_exit_policy.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..23c2bc3b7384dfa1f39dea72a49c0369ad84b1f8
+--- /dev/null
++++ b/tests/test_trailing_exit_policy.py
+@@ -0,0 +1,88 @@
++"""Trailing policy is explicit on wire; older exits keep their exact contract."""
++
++import pytest
++from test_rc3_contracts import _intent
++
++from openpine_contracts import (
++    SchemaValidationError,
++    seal_content_hash,
++    validate_payload,
++    verify_content_hash,
++)
++
++
++def trail(scope="named", policy="first_trigger"):
++    return _intent(
++        "exit",
++        schema_version="2.5.0",
++        order_id="X",
++        trail_price="105",
++        trail_points="2",
++        trail_offset="0",
++        price_pair_policy=policy,
++        **({"from_entry": "A"} if scope == "named" else {"exit_scope": "all_entries"}),
++    )
++
++
++@pytest.mark.parametrize("scope", ["named", "all"])
++@pytest.mark.parametrize("policy", ["absolute_first", "first_trigger"])
++@pytest.mark.parametrize("activation", ["price", "points", "both"])
++def test_trailing_wire_roundtrip(scope, policy, activation):
++    event = trail(scope, policy)
++    if activation != "both":
++        event.pop("trail_points" if activation == "price" else "trail_price")
++    event.update(profit="5", limit="110")  # TP is compatible; a second stop is not.
++    sealed = seal_content_hash(event, schema_id="openpine.intent.v2")
++    validate_payload("openpine.intent.v2", sealed)
++    assert verify_content_hash(sealed, schema_id="openpine.intent.v2")
++
++
++@pytest.mark.parametrize(
++    "fault",
++    [
++        "offset",
++        "null_offset",
++        "negative",
++        "activation",
++        "null_activation",
++        "policy",
++        "missing_policy",
++        "both_scopes",
++        "no_scope",
++        "fixed_stop",
++        "fixed_loss",
++        "wrong_kind",
++        "old_version",
++    ],
++)
++def test_incomplete_or_ambiguous_trailing_is_rejected(fault):
++    event = trail()
++    if fault == "offset":
++        event.pop("trail_offset")
++    elif fault == "null_offset":
++        event["trail_offset"] = None
++    elif fault == "negative":
++        event["trail_offset"] = "-1"
++    elif fault == "activation":
++        event.pop("trail_price")
++        event.pop("trail_points")
++    elif fault == "null_activation":
++        event["trail_price"] = event["trail_points"] = None
++    elif fault == "policy":
++        event["price_pair_policy"] = "unknown"
++    elif fault == "missing_policy":
++        event.pop("price_pair_policy")
++    elif fault == "both_scopes":
++        event["exit_scope"] = "all_entries"
++    elif fault == "no_scope":
++        event.pop("from_entry")
++    elif fault == "fixed_stop":
++        event["stop"] = "95"
++    elif fault == "fixed_loss":
++        event["loss"] = "0"
++    elif fault == "wrong_kind":
++        event["kind"] = "close"
++    elif fault == "old_version":
++        event["schema_version"] = "2.4.0"
++    with pytest.raises(SchemaValidationError):
++        validate_payload("openpine.intent.v2", event)
