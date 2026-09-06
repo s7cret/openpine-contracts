@@ -1,0 +1,224 @@
+diff --git a/openpine_contracts/schemas/openpine.intent.v2.json b/openpine_contracts/schemas/openpine.intent.v2.json
+index 538ed783fd93455538dfc4d1d1ece004746dc974..93161d8bb7c878ed0ad90e76bcfe93efeee5b272 100644
+--- a/openpine_contracts/schemas/openpine.intent.v2.json
++++ b/openpine_contracts/schemas/openpine.intent.v2.json
+@@ -36,7 +36,10 @@
+       "const": "openpine.intent.v2"
+     },
+     "schema_version": {
+-      "const": "2.2.0"
++      "enum": [
++        "2.2.0",
++        "2.3.0"
++      ]
+     },
+     "producer": {
+       "type": "string",
+@@ -293,6 +296,9 @@
+     "risk_scope": {
+       "type": "string",
+       "minLength": 1
++    },
++    "exit_scope": {
++      "const": "all_entries"
+     }
+   },
+   "$defs": {
+@@ -827,15 +833,17 @@
+         "semantic_profile",
+         "source_span",
+         "idempotency_key",
+-        "order_id",
+-        "from_entry"
++        "order_id"
+       ],
+       "properties": {
+         "schema_id": {
+           "const": "openpine.intent.v2"
+         },
+         "schema_version": {
+-          "const": "2.2.0"
++          "enum": [
++            "2.2.0",
++            "2.3.0"
++          ]
+         },
+         "producer": {
+           "type": "string",
+@@ -1051,8 +1059,51 @@
+         },
+         "disable_alert": {
+           "type": "boolean"
++        },
++        "exit_scope": {
++          "const": "all_entries"
+         }
+-      }
++      },
++      "allOf": [
++        {
++          "if": {
++            "properties": {
++              "schema_version": {
++                "const": "2.2.0"
++              }
++            }
++          },
++          "then": {
++            "required": [
++              "from_entry"
++            ],
++            "not": {
++              "required": [
++                "exit_scope"
++              ]
++            }
++          }
++        },
++        {
++          "if": {
++            "properties": {
++              "schema_version": {
++                "const": "2.3.0"
++              }
++            }
++          },
++          "then": {
++            "required": [
++              "exit_scope"
++            ],
++            "not": {
++              "required": [
++                "from_entry"
++              ]
++            }
++          }
++        }
++      ]
+     },
+     "CloseIntent": {
+       "type": "object",
+diff --git a/scripts/generate_schemas.py b/scripts/generate_schemas.py
+index 454a4bf8bf1ed908c781ef684cf7163cd26c10c5..9adc3b4705199253644980c0435bed1090ab2295 100644
+--- a/scripts/generate_schemas.py
++++ b/scripts/generate_schemas.py
+@@ -269,6 +269,27 @@ def write(name: str, payload: dict) -> None:
+     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+ 
+ 
++def with_all_entry_exit_scope(payload: dict) -> dict:
++    """Extend exit wire semantics explicitly; keep every 2.2 identity mandatory.
++
++    Version 2.3 is reserved for all-entry exits. A missing 2.2 from_entry remains
++    invalid and no literal user entry ID (including '*') becomes a wildcard.
++    """
++    payload["properties"]["schema_version"] = {"enum": ["2.2.0", "2.3.0"]}
++    payload["properties"]["exit_scope"] = {"const": "all_entries"}
++    exit_schema = payload["$defs"]["ExitIntent"]
++    exit_schema["required"].remove("from_entry")
++    exit_schema["properties"]["schema_version"] = {"enum": ["2.2.0", "2.3.0"]}
++    exit_schema["properties"]["exit_scope"] = {"const": "all_entries"}
++    exit_schema["allOf"] = [
++        {"if": {"properties": {"schema_version": {"const": "2.2.0"}}},
++         "then": {"required": ["from_entry"], "not": {"required": ["exit_scope"]}}},
++        {"if": {"properties": {"schema_version": {"const": "2.3.0"}}},
++         "then": {"required": ["exit_scope"], "not": {"required": ["from_entry"]}}},
++    ]
++    return payload
++
++
+ def main() -> None:
+     OUT.mkdir(parents=True, exist_ok=True)
+ 
+@@ -1179,7 +1200,7 @@ def main() -> None:
+     }
+     write(
+         "openpine.intent.v2.json",
+-        rc4_schema(
++        with_all_entry_exit_scope(rc4_schema(
+             "openpine.intent.v2",
+             "2.2.0",
+             required=intent_common_required,
+@@ -1252,7 +1273,7 @@ def main() -> None:
+                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
+                 ]
+             },
+-        ),
++        )),
+     )
+ 
+     write(
+diff --git a/tests/test_all_entry_exit.py b/tests/test_all_entry_exit.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..526e6792301be64825cfbcf9db5af96c7fe2d2aa
+--- /dev/null
++++ b/tests/test_all_entry_exit.py
+@@ -0,0 +1,68 @@
++"""Unqualified exits have an explicit versioned scope, never a wildcard entry ID."""
++
++import pytest
++from test_rc3_contracts import _intent
++
++from openpine_contracts import (
++    SchemaValidationError,
++    seal_content_hash,
++    validate_payload,
++    verify_content_hash,
++)
++
++
++def all_exit(**updates):
++    return _intent(
++        "exit",
++        schema_version="2.3.0",
++        exit_scope="all_entries",
++        order_id="X",
++        profit="5",
++        **updates,
++    )
++
++
++def test_all_entry_exit_is_sealed_and_validated():
++    event = seal_content_hash(all_exit(), schema_id="openpine.intent.v2")
++    validate_payload("openpine.intent.v2", event)
++    assert verify_content_hash(event, schema_id="openpine.intent.v2")
++
++
++@pytest.mark.parametrize(
++    "fault",
++    [
++        "old_version",
++        "explicit_and_all",
++        "missing_scope",
++        "unknown_scope",
++        "close",
++        "unknown_version",
++        "entry",
++    ],
++)
++def test_scope_is_unambiguous_and_cannot_change_other_intents(fault):
++    value = all_exit()
++    if fault == "old_version":
++        value["schema_version"] = "2.2.0"
++    if fault == "explicit_and_all":
++        value["from_entry"] = "A"
++    if fault == "missing_scope":
++        value.pop("exit_scope")
++    if fault == "unknown_scope":
++        value["exit_scope"] = "*"
++    if fault == "close":
++        value["kind"] = "close"
++    if fault == "entry":
++        value["kind"] = "entry"
++        value.update(direction="LONG", qty="1")
++    if fault == "unknown_version":
++        value["schema_version"] = "2.4.0"
++    with pytest.raises(SchemaValidationError):
++        validate_payload("openpine.intent.v2", value)
++
++
++@pytest.mark.parametrize("name", ["A", "*", "A:B"])
++def test_existing_explicit_entry_ids_are_not_wildcards(name):
++    validate_payload(
++        "openpine.intent.v2", _intent("exit", order_id="X", from_entry=name, profit="5")
++    )

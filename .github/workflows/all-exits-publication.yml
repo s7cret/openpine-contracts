@@ -1,0 +1,78 @@
+name: Verify versioned all-entry exit contracts before publication
+'on':
+  push:
+    branches: ['ops/rc6-all-exits-20260906']
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+concurrency:
+  group: rc6-all-exits-publication
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Restore exact reviewed source
+        run: |
+          cp .github/all-exits/restore.py "$RUNNER_TEMP/restore.py"
+          python "$RUNNER_TEMP/restore.py" restore .github/all-exits/plan.json "$RUNNER_TEMP/evidence"
+          cp "$RUNNER_TEMP/restore.py" "$RUNNER_TEMP/evidence/restore.py"
+      - name: Install clean source
+        run: |
+          python -m pip install setuptools==84.0.0 wheel==0.48.0 build==1.6.0
+          mkdir -p "$RUNNER_TEMP/build-source"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/build-source"
+          python -m pip install "$RUNNER_TEMP/build-source[dev]"
+      - name: Full contract suite including generator consistency
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+        run: python -m pytest -q --junitxml="$RUNNER_TEMP/evidence/contracts.xml"
+      - name: Lint and build real distributions
+        run: |
+          python -m ruff check scripts/generate_schemas.py tests/test_all_entry_exit.py
+          python -m compileall -q openpine_contracts
+          python -m build --no-isolation --outdir "$RUNNER_TEMP/evidence/dist" "$RUNNER_TEMP/build-source"
+          python -m pip freeze > "$RUNNER_TEMP/evidence/environment.txt"
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: all-exits-${{ matrix.python }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/evidence/
+          retention-days: 30
+          if-no-files-found: error
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: all-exits-3.13-${{ github.run_id }}
+          path: evidence
+      - name: Fast-forward RC6 and archive the temporary delivery ref
+        run: python evidence/restore.py publish evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: all-exits-publication-${{ github.run_id }}
+          path: evidence/
+          retention-days: 30
