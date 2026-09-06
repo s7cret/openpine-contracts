@@ -1,80 +1,10 @@
-diff --git a/scripts/generate_schemas.py b/scripts/generate_schemas.py
-index 61e00528e7333299486400c212f94c84b612832e..7268654eb8386459e82b6742986e6a69ef909d4a 100644
---- a/scripts/generate_schemas.py
-+++ b/scripts/generate_schemas.py
-@@ -359,6 +359,47 @@ def with_trailing_exit_policy(payload: dict) -> dict:
-     return payload
- 
- 
-+
-+def with_exit_execution_metadata(payload: dict) -> dict:
-+    """2.6 adds leg-specific text without reinterpreting earlier price policies.
-+
-+    exit_semantics_version explicitly selects the existing 2.2--2.5 constraints.
-+    The new wrapper reuses those exact constraints instead of copying a second
-+    price/target validation implementation. Old readers reject 2.6 on purpose.
-+    """
-+    from copy import deepcopy
-+
-+    legacy = deepcopy(payload["$defs"]["ExitIntent"])
-+    metadata = {
-+        "type": "object", "additionalProperties": False, "minProperties": 1,
-+        "properties": {name: {"type": "string"} for name in (
-+            "comment_profit", "comment_loss", "comment_trailing",
-+            "alert_profit", "alert_loss", "alert_trailing",
-+        )},
-+    }
-+
-+    def rebind(value):
-+        if isinstance(value, dict):
-+            return {("exit_semantics_version" if key == "schema_version" else key): rebind(item)
-+                    for key, item in value.items()}
-+        if isinstance(value, list):
-+            return ["exit_semantics_version" if item == "schema_version" else rebind(item)
-+                    for item in value]
-+        return value
-+
-+    extended = rebind(legacy)
-+    extended["required"] += ["schema_version", "exit_metadata"]
-+    extended["properties"].update(
-+        schema_version={"const": "2.6.0"}, exit_metadata=metadata,
-+    )
-+    payload["$defs"]["ExitIntent"] = {"oneOf": [legacy, extended]}
-+    payload["properties"]["schema_version"] = {
-+        "enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.6.0"]
-+    }
-+    payload["properties"]["exit_semantics_version"] = {"enum": ["2.2.0", "2.3.0", "2.4.0", "2.5.0"]}
-+    payload["properties"]["exit_metadata"] = metadata
-+    return payload
-+
- def main() -> None:
-     OUT.mkdir(parents=True, exist_ok=True)
- 
-@@ -1269,7 +1310,7 @@ def main() -> None:
-     }
-     write(
-         "openpine.intent.v2.json",
--        with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
-+        with_exit_execution_metadata(with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
-             "openpine.intent.v2",
-             "2.2.0",
-             required=intent_common_required,
-@@ -1342,7 +1383,7 @@ def main() -> None:
-                     for def_name, _, _ in INTENT_KIND_FIELDS.values()
-                 ]
-             },
--        )))),
-+        ))))),
-     )
- 
-     write(
 diff --git a/tests/test_exit_execution_metadata.py b/tests/test_exit_execution_metadata.py
 new file mode 100644
-index 0000000000000000000000000000000000000000..10157e5a518da051a0312858aef869e1ea7992cd
+index 0000000000000000000000000000000000000000..bebd7e6b9dc85ec2cf44b93a0251f56422adc6b3
 --- /dev/null
 +++ b/tests/test_exit_execution_metadata.py
-@@ -0,0 +1,116 @@
-+"""Leg metadata preserves the exact older price/scope validation contract."""
+@@ -0,0 +1,117 @@
++"""Every text field in the published 2.6 exit contract remains exact and versioned."""
 +
 +from copy import deepcopy
 +
@@ -117,8 +47,8 @@ index 0000000000000000000000000000000000000000..10157e5a518da051a0312858aef869e1
 +    event = old(version)
 +    event.update(
 +        schema_version="2.6.0",
-+        exit_semantics_version=version,
-+        exit_metadata=metadata or {"comment_profit": "TP"},
++        price_pair_policy="first_trigger" if version in ("2.4.0", "2.5.0") else "absolute_first",
++        **(metadata or {"comment_profit": "TP"}),
 +    )
 +    return event
 +
@@ -131,21 +61,21 @@ index 0000000000000000000000000000000000000000..10157e5a518da051a0312858aef869e1
 +    event = seal_content_hash(extended(version, **{field: text}), schema_id="openpine.intent.v2")
 +    validate_payload("openpine.intent.v2", event)
 +    assert verify_content_hash(event, schema_id="openpine.intent.v2")
-+    assert event["exit_metadata"][field] == text
++    assert event[field] == text
 +
 +
 +@pytest.mark.parametrize(
 +    "fault",
 +    [
-+        "no_metadata",
-+        "empty_metadata",
++        "unknown_field",
++        "no_active_leg",
 +        "null",
 +        "bool",
-+        "unknown_field",
++        "bad_policy",
 +        "wrong_kind",
 +        "old_version",
-+        "unknown_base",
-+        "missing_base",
++        "unknown_version",
++        "missing_policy",
 +        "both_scopes",
 +        "bad_pair",
 +        "bad_trail",
@@ -153,28 +83,29 @@ index 0000000000000000000000000000000000000000..10157e5a518da051a0312858aef869e1
 +)
 +def test_ambiguous_or_malformed_metadata_cannot_bypass_old_contracts(fault):
 +    event = extended()
-+    if fault == "no_metadata":
-+        event.pop("exit_metadata")
-+    elif fault == "empty_metadata":
-+        event["exit_metadata"] = {}
++    if fault == "unknown_field":
++        event["arbitrary"] = "x"
++    elif fault == "no_active_leg":
++        event.pop("profit")
++        event.pop("limit")
 +    elif fault in {"null", "bool"}:
-+        event["exit_metadata"]["comment_profit"] = None if fault == "null" else True
-+    elif fault == "unknown_field":
-+        event["exit_metadata"]["arbitrary"] = "x"
++        event["comment_profit"] = None if fault == "null" else True
++    elif fault == "bad_policy":
++        event["price_pair_policy"] = "unknown"
 +    elif fault == "wrong_kind":
 +        event["kind"] = "entry"
 +        event.update(qty="1", direction="LONG")
 +    elif fault == "old_version":
 +        event["schema_version"] = "2.2.0"
-+    elif fault == "unknown_base":
-+        event["exit_semantics_version"] = "2.6.0"
-+    elif fault == "missing_base":
-+        event.pop("exit_semantics_version")
++    elif fault == "unknown_version":
++        event["schema_version"] = "2.7.0"
++    elif fault == "missing_policy":
++        event.pop("price_pair_policy")
 +    elif fault == "both_scopes":
 +        event["exit_scope"] = "all_entries"
 +    elif fault == "bad_pair":
 +        event = extended("2.4.0")
-+        event.pop("limit")
++        event["profit"] = True
 +    else:
 +        event = extended("2.5.0")
 +        event.pop("trail_offset")
@@ -186,7 +117,7 @@ index 0000000000000000000000000000000000000000..10157e5a518da051a0312858aef869e1
 +def test_metadata_is_not_an_unversioned_addition(version):
 +    event = old(version)
 +    before = deepcopy(event)
-+    event["exit_metadata"] = {"alert_profit": "TP"}
++    event["alert_profit"] = "TP"
 +    with pytest.raises(SchemaValidationError):
 +        validate_payload("openpine.intent.v2", event)
 +    validate_payload("openpine.intent.v2", before)

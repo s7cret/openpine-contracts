@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Reproduce generated schema and exact reviewed commits
+      - name: Restore exact reviewed commits on the preserved published base
         run: |
           cp .github/exit-metadata/restore.py "$RUNNER_TEMP/restore.py"
           python "$RUNNER_TEMP/restore.py" restore .github/exit-metadata/plan.json "$RUNNER_TEMP/evidence"
@@ -41,6 +41,12 @@ jobs:
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
         run: python -m pytest -q --junitxml="$RUNNER_TEMP/evidence/contracts.xml"
+      - name: Preserve exact current host baseline for integration
+        run: |
+          git clone --quiet https://github.com/s7cret/openpine.git "$RUNNER_TEMP/host-base"
+          git -C "$RUNNER_TEMP/host-base" update-ref refs/heads/review-host-base bbf338bd1ea3635e4efb3fa6529962cd11fb2bcb
+          git -C "$RUNNER_TEMP/host-base" bundle create "$RUNNER_TEMP/evidence/host-base.bundle" refs/heads/review-host-base
+          git -C "$RUNNER_TEMP/host-base" bundle verify "$RUNNER_TEMP/evidence/host-base.bundle"
       - name: Lint and build
         run: |
           python -m ruff check scripts/generate_schemas.py tests/test_exit_execution_metadata.py
