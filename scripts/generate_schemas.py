@@ -282,10 +282,14 @@ def with_all_entry_exit_scope(payload: dict) -> dict:
     exit_schema["properties"]["schema_version"] = {"enum": ["2.2.0", "2.3.0"]}
     exit_schema["properties"]["exit_scope"] = {"const": "all_entries"}
     exit_schema["allOf"] = [
-        {"if": {"properties": {"schema_version": {"const": "2.2.0"}}},
-         "then": {"required": ["from_entry"], "not": {"required": ["exit_scope"]}}},
-        {"if": {"properties": {"schema_version": {"const": "2.3.0"}}},
-         "then": {"required": ["exit_scope"], "not": {"required": ["from_entry"]}}},
+        {
+            "if": {"properties": {"schema_version": {"const": "2.2.0"}}},
+            "then": {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+        },
+        {
+            "if": {"properties": {"schema_version": {"const": "2.3.0"}}},
+            "then": {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+        },
     ]
     return payload
 
@@ -301,24 +305,27 @@ def with_exit_price_pair_policy(payload: dict) -> dict:
     payload["properties"].update(schema_version=versions, price_pair_policy=policy)
     exit_schema = payload["$defs"]["ExitIntent"]
     exit_schema["properties"].update(schema_version=versions, price_pair_policy=policy)
-    exit_schema["allOf"].append({
-        "if": {"properties": {"schema_version": {"const": "2.4.0"}}},
-        "then": {
-            "required": ["price_pair_policy"],
-            "oneOf": [
-                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
-                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
-            ],
-            "anyOf": [
-                {"required": list(pair),
-                 "properties": {name: {"type": "string"} for name in pair}}
-                for pair in (("profit", "limit"), ("loss", "stop"))
-            ],
-        },
-        "else": {"not": {"required": ["price_pair_policy"]}},
-    })
+    exit_schema["allOf"].append(
+        {
+            "if": {"properties": {"schema_version": {"const": "2.4.0"}}},
+            "then": {
+                "required": ["price_pair_policy"],
+                "oneOf": [
+                    {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                    {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+                ],
+                "anyOf": [
+                    {
+                        "required": list(pair),
+                        "properties": {name: {"type": "string"} for name in pair},
+                    }
+                    for pair in (("profit", "limit"), ("loss", "stop"))
+                ],
+            },
+            "else": {"not": {"required": ["price_pair_policy"]}},
+        }
+    )
     return payload
-
 
 
 def with_trailing_exit_policy(payload: dict) -> dict:
@@ -338,24 +345,30 @@ def with_trailing_exit_policy(payload: dict) -> dict:
         "if": {"properties": {"schema_version": {"not": {"const": "2.5.0"}}}},
         "then": {"not": {"required": ["price_pair_policy"]}},
     }
-    exit_schema["allOf"].append({
-        "if": {"properties": {"schema_version": {"const": "2.5.0"}}},
-        "then": {
-            "required": ["price_pair_policy", "trail_offset"],
-            "properties": {
-                "trail_offset": {"type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"},
-                "stop": {"type": "null"}, "loss": {"type": "null"},
+    exit_schema["allOf"].append(
+        {
+            "if": {"properties": {"schema_version": {"const": "2.5.0"}}},
+            "then": {
+                "required": ["price_pair_policy", "trail_offset"],
+                "properties": {
+                    "trail_offset": {
+                        "type": "string",
+                        "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$",
+                    },
+                    "stop": {"type": "null"},
+                    "loss": {"type": "null"},
+                },
+                "oneOf": [
+                    {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                    {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+                ],
+                "anyOf": [
+                    {"required": [name], "properties": {name: {"type": "string"}}}
+                    for name in ("trail_price", "trail_points")
+                ],
             },
-            "oneOf": [
-                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
-                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
-            ],
-            "anyOf": [
-                {"required": [name], "properties": {name: {"type": "string"}}}
-                for name in ("trail_price", "trail_points")
-            ],
-        },
-    })
+        }
+    )
     return payload
 
 
@@ -369,8 +382,11 @@ def with_exit_completion(payload: dict) -> dict:
     payload["properties"]["schema_version"] = versions
     exit_schema = payload["$defs"]["ExitIntent"]
     exit_schema["properties"]["schema_version"] = versions
-    fields = tuple(f"{prefix}_{leg}" for prefix in ("comment", "alert")
-                   for leg in ("profit", "loss", "trailing"))
+    fields = tuple(
+        f"{prefix}_{leg}"
+        for prefix in ("comment", "alert")
+        for leg in ("profit", "loss", "trailing")
+    )
     for name in fields:
         payload["properties"][name] = {"type": "string"}
         exit_schema["properties"][name] = {"type": "string"}
@@ -378,70 +394,93 @@ def with_exit_completion(payload: dict) -> dict:
     exit_schema["allOf"][2]["else"]["if"]["properties"]["schema_version"] = {
         "not": {"enum": ["2.5.0", "2.6.0"]}
     }
+
     def active(names: tuple[str, ...]) -> dict:
-        return {"anyOf": [{"required": [name], "properties": {name: {"type": "string"}}}
-                          for name in names]}
-    exit_schema["allOf"].append({
-        "if": {"properties": {"schema_version": {"const": "2.6.0"}}},
-        "then": {
-            "required": ["price_pair_policy"],
-            "oneOf": [
-                {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
-                {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
-            ],
-            **active(("profit", "limit", "loss", "stop", "trail_price", "trail_points")),
-            "allOf": [{
-                "if": active(("trail_price", "trail_points", "trail_offset")),
-                "then": {
-                    "required": ["trail_offset"],
-                    "properties": {"trail_offset": {
-                        "type": "string", "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$"
-                    }},
-                    **active(("trail_price", "trail_points")),
-                },
-            }],
-        },
-        "else": {"not": {"anyOf": [{"required": [name]} for name in fields]}},
-    })
+        return {
+            "anyOf": [
+                {"required": [name], "properties": {name: {"type": "string"}}} for name in names
+            ]
+        }
+
+    exit_schema["allOf"].append(
+        {
+            "if": {"properties": {"schema_version": {"const": "2.6.0"}}},
+            "then": {
+                "required": ["price_pair_policy"],
+                "oneOf": [
+                    {"required": ["from_entry"], "not": {"required": ["exit_scope"]}},
+                    {"required": ["exit_scope"], "not": {"required": ["from_entry"]}},
+                ],
+                **active(("profit", "limit", "loss", "stop", "trail_price", "trail_points")),
+                "allOf": [
+                    {
+                        "if": active(("trail_price", "trail_points", "trail_offset")),
+                        "then": {
+                            "required": ["trail_offset"],
+                            "properties": {
+                                "trail_offset": {
+                                    "type": "string",
+                                    "pattern": r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$",
+                                }
+                            },
+                            **active(("trail_price", "trail_points")),
+                        },
+                    }
+                ],
+            },
+            "else": {"not": {"anyOf": [{"required": [name]} for name in fields]}},
+        }
+    )
     return payload
 
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
 
-    write("openpine.execution_event.v1.json", {'$schema': 'https://json-schema.org/draft/2020-12/schema',
-     '$id': 'openpine.execution_event.v1',
-     'type': 'object',
-     'additionalProperties': False,
-     'required': ['sequence',
-                  'bar_index',
-                  'last_bar_index',
-                  'bar_open_time_utc_ms',
-                  'tick_index',
-                  'recalc_iteration',
-                  'schema_id',
-                  'last_historical_bar_index',
-                  'phase',
-                  'realtime',
-                  'final_tick',
-                  'cause',
-                  'fill_order_id',
-                  'fill_price'],
-     'properties': {'sequence': {'type': 'integer', 'minimum': 0},
-                    'bar_index': {'type': 'integer', 'minimum': 0},
-                    'last_bar_index': {'type': 'integer', 'minimum': 0},
-                    'bar_open_time_utc_ms': {'type': 'integer', 'minimum': 0},
-                    'tick_index': {'type': 'integer', 'minimum': 0},
-                    'recalc_iteration': {'type': 'integer', 'minimum': 0},
-                    'schema_id': {'const': 'openpine.execution_event.v1'},
-                    'last_historical_bar_index': {'type': 'integer', 'minimum': -1},
-                    'phase': {'enum': ['HISTORICAL_EVAL', 'REALTIME_EVAL', 'ORDER_FILL_RECALC']},
-                    'realtime': {'type': 'boolean'},
-                    'final_tick': {'type': 'boolean'},
-                    'cause': {'enum': ['BAR_CLOSE', 'TICK', 'ORDER_FILL']},
-                    'fill_order_id': {'type': ['string', 'null'], 'minLength': 1},
-                    'fill_price': {'type': ['string', 'null'],
-                                   'pattern': '^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$'}}})
+    write(
+        "openpine.execution_event.v1.json",
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "openpine.execution_event.v1",
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "sequence",
+                "bar_index",
+                "last_bar_index",
+                "bar_open_time_utc_ms",
+                "tick_index",
+                "recalc_iteration",
+                "schema_id",
+                "last_historical_bar_index",
+                "phase",
+                "realtime",
+                "final_tick",
+                "cause",
+                "fill_order_id",
+                "fill_price",
+            ],
+            "properties": {
+                "sequence": {"type": "integer", "minimum": 0},
+                "bar_index": {"type": "integer", "minimum": 0},
+                "last_bar_index": {"type": "integer", "minimum": 0},
+                "bar_open_time_utc_ms": {"type": "integer", "minimum": 0},
+                "tick_index": {"type": "integer", "minimum": 0},
+                "recalc_iteration": {"type": "integer", "minimum": 0},
+                "schema_id": {"const": "openpine.execution_event.v1"},
+                "last_historical_bar_index": {"type": "integer", "minimum": -1},
+                "phase": {"enum": ["HISTORICAL_EVAL", "REALTIME_EVAL", "ORDER_FILL_RECALC"]},
+                "realtime": {"type": "boolean"},
+                "final_tick": {"type": "boolean"},
+                "cause": {"enum": ["BAR_CLOSE", "TICK", "ORDER_FILL"]},
+                "fill_order_id": {"type": ["string", "null"], "minLength": 1},
+                "fill_price": {
+                    "type": ["string", "null"],
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+                },
+            },
+        },
+    )
 
     write(
         "openpine.event.v1.json",
@@ -1316,80 +1355,88 @@ def main() -> None:
     }
     write(
         "openpine.intent.v2.json",
-        with_exit_completion(with_trailing_exit_policy(with_exit_price_pair_policy(with_all_entry_exit_scope(rc4_schema(
-            "openpine.intent.v2",
-            "2.2.0",
-            required=intent_common_required,
-            properties={
-                key: value
-                for key, value in intent_common_properties.items()
-                if key not in ENVELOPE_PROPS
-            }
-            | {
-                field: definition
-                for _, _, fields in INTENT_KIND_FIELDS.values()
-                for field, definition in fields.items()
-            },
-            defs={
-                "SourceProvenance": {
-                    "oneOf": [
-                        {"$ref": "#/$defs/KnownSourceProvenance"},
-                        {"$ref": "#/$defs/UnknownSourceProvenance"},
-                    ]
-                },
-                "KnownSourceProvenance": strict_object(
-                    [
-                        "known",
-                        "source_hash",
-                        "start_offset",
-                        "end_offset",
-                        "start_line",
-                        "start_col",
-                        "end_line",
-                        "end_col",
-                    ],
-                    {
-                        "known": {"const": True},
-                        "source_hash": NONZERO_SHA,
-                        "start_offset": {"type": "integer", "minimum": 0},
-                        "end_offset": {"type": "integer", "minimum": 0},
-                        "start_line": {"type": "integer", "minimum": 1},
-                        "start_col": {"type": "integer", "minimum": 0},
-                        "end_line": {"type": "integer", "minimum": 1},
-                        "end_col": {"type": "integer", "minimum": 0},
-                    },
-                ),
-                "UnknownSourceProvenance": strict_object(
-                    [
-                        "known",
-                        "source_hash",
-                        "start_offset",
-                        "end_offset",
-                        "start_line",
-                        "start_col",
-                        "end_line",
-                        "end_col",
-                    ],
-                    {
-                        "known": {"const": False},
-                        "source_hash": {"type": "null"},
-                        "start_offset": {"type": "null"},
-                        "end_offset": {"type": "null"},
-                        "start_line": {"type": "null"},
-                        "start_col": {"type": "null"},
-                        "end_line": {"type": "null"},
-                        "end_col": {"type": "null"},
-                    },
-                ),
-                **intent_kind_defs,
-            },
-            extra={
-                "oneOf": [
-                    {"$ref": f"#/$defs/{def_name}"}
-                    for def_name, _, _ in INTENT_KIND_FIELDS.values()
-                ]
-            },
-        ))))),
+        with_exit_completion(
+            with_trailing_exit_policy(
+                with_exit_price_pair_policy(
+                    with_all_entry_exit_scope(
+                        rc4_schema(
+                            "openpine.intent.v2",
+                            "2.2.0",
+                            required=intent_common_required,
+                            properties={
+                                key: value
+                                for key, value in intent_common_properties.items()
+                                if key not in ENVELOPE_PROPS
+                            }
+                            | {
+                                field: definition
+                                for _, _, fields in INTENT_KIND_FIELDS.values()
+                                for field, definition in fields.items()
+                            },
+                            defs={
+                                "SourceProvenance": {
+                                    "oneOf": [
+                                        {"$ref": "#/$defs/KnownSourceProvenance"},
+                                        {"$ref": "#/$defs/UnknownSourceProvenance"},
+                                    ]
+                                },
+                                "KnownSourceProvenance": strict_object(
+                                    [
+                                        "known",
+                                        "source_hash",
+                                        "start_offset",
+                                        "end_offset",
+                                        "start_line",
+                                        "start_col",
+                                        "end_line",
+                                        "end_col",
+                                    ],
+                                    {
+                                        "known": {"const": True},
+                                        "source_hash": NONZERO_SHA,
+                                        "start_offset": {"type": "integer", "minimum": 0},
+                                        "end_offset": {"type": "integer", "minimum": 0},
+                                        "start_line": {"type": "integer", "minimum": 1},
+                                        "start_col": {"type": "integer", "minimum": 0},
+                                        "end_line": {"type": "integer", "minimum": 1},
+                                        "end_col": {"type": "integer", "minimum": 0},
+                                    },
+                                ),
+                                "UnknownSourceProvenance": strict_object(
+                                    [
+                                        "known",
+                                        "source_hash",
+                                        "start_offset",
+                                        "end_offset",
+                                        "start_line",
+                                        "start_col",
+                                        "end_line",
+                                        "end_col",
+                                    ],
+                                    {
+                                        "known": {"const": False},
+                                        "source_hash": {"type": "null"},
+                                        "start_offset": {"type": "null"},
+                                        "end_offset": {"type": "null"},
+                                        "start_line": {"type": "null"},
+                                        "start_col": {"type": "null"},
+                                        "end_line": {"type": "null"},
+                                        "end_col": {"type": "null"},
+                                    },
+                                ),
+                                **intent_kind_defs,
+                            },
+                            extra={
+                                "oneOf": [
+                                    {"$ref": f"#/$defs/{def_name}"}
+                                    for def_name, _, _ in INTENT_KIND_FIELDS.values()
+                                ]
+                            },
+                        )
+                    )
+                )
+            )
+        ),
     )
 
     write(
