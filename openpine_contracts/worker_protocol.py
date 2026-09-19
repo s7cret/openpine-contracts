@@ -567,7 +567,8 @@ def validate_worker_protocol_sequence(messages: Sequence[Mapping[str, object]]) 
                     # following result batch, never commands from the prior
                     # callback (which can have a coincidentally equal hash).
                     pending_recalc_batch = (
-                        body.get("intent_batch_message_id"), body.get("intent_batch_hash")
+                        body.get("intent_batch_message_id"),
+                        body.get("intent_batch_hash"),
                     )
                     if pending_recalc_batch[0] in message_ids:
                         _fail(

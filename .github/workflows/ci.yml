@@ -2,9 +2,9 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/5.0.0rc6]
   pull_request:
-    branches: [main]
+    branches: [main, release/5.0.0rc6]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   python:
+    name: contracts-python-${{ matrix.python-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -39,7 +40,7 @@ jobs:
           python -m build
           python -m venv /tmp/op-contracts-smoke
           /tmp/op-contracts-smoke/bin/pip install dist/*.whl
-          /tmp/op-contracts-smoke/bin/python - <<'PY'
+          /tmp/op-contracts-smoke/bin/python -I - <<'PY'
           import importlib.resources
           import openpine_contracts
           from openpine_contracts import get_schema, list_schema_ids, schema_bytes
