@@ -1,7 +1,7 @@
 """Versioned composite exits and per-leg messages, preserving all older readers."""
 
 import pytest
-from test_rc3_contracts import _intent
+from .test_rc3_contracts import _intent
 
 from openpine_contracts import (
     SchemaValidationError,

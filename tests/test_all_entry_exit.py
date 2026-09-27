@@ -1,7 +1,7 @@
 """Unqualified exits have an explicit versioned scope, never a wildcard entry ID."""
 
 import pytest
-from test_rc3_contracts import _intent
+from .test_rc3_contracts import _intent
 
 from openpine_contracts import (
     SchemaValidationError,

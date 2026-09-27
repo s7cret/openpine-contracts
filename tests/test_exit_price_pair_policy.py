@@ -3,7 +3,7 @@
 from copy import deepcopy
 
 import pytest
-from test_rc3_contracts import _intent
+from .test_rc3_contracts import _intent
 
 from openpine_contracts import (
     SchemaValidationError,

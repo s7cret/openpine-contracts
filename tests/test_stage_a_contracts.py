@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 import pytest
-from test_rc4_wave1_contracts import (
+from .test_rc4_wave1_contracts import (
     HASH_A,
     HASH_B,
     WORKER_BODIES,
