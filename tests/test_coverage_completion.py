@@ -23,6 +23,7 @@ from openpine_contracts import (
 )
 from openpine_contracts.errors import WorkerProtocolSemanticError
 from openpine_contracts.money import decimal_string, unsafe_decimal_from_float
+
 from .test_rc4_wave1_contracts import (
     HASH_D,
     WORKER_BODIES,

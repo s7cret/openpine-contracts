@@ -3,6 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 
 import pytest
+
+import openpine_contracts as contracts
+from openpine_contracts import SchemaValidationError, get_schema, validate_payload
+
 from .test_rc4_wave1_contracts import (
     HASH_A,
     HASH_B,
@@ -12,9 +16,6 @@ from .test_rc4_wave1_contracts import (
     _valid_worker_sequence,
     _worker_message,
 )
-
-import openpine_contracts as contracts
-from openpine_contracts import SchemaValidationError, get_schema, validate_payload
 
 
 def _reseal(message: dict[str, object]) -> dict[str, object]:
