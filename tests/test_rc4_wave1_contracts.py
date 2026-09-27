@@ -1628,10 +1628,12 @@ def test_recalc_request_rejects_projection_hash_and_identity_drift() -> None:
     assert caught.value.details["reason"] == "PROJECTION_IDENTITY_MISMATCH"
 
 
-def test_schema_generation_is_deterministic_and_idempotent(tmp_path: Path) -> None:
+def test_schema_generation_is_deterministic_and_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import scripts.generate_schemas as generator
 
-    generator.OUT = tmp_path
+    monkeypatch.setattr(generator, "OUT", tmp_path)
     generator.main()
     first = {path.name: path.read_bytes() for path in sorted(tmp_path.glob("*.json"))}
     generator.main()

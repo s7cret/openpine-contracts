@@ -1,7 +1,6 @@
 """Versioned composite exits and per-leg messages, preserving all older readers."""
 
 import pytest
-from test_rc3_contracts import _intent
 
 from openpine_contracts import (
     SchemaValidationError,
@@ -9,6 +8,8 @@ from openpine_contracts import (
     validate_payload,
     verify_content_hash,
 )
+
+from .test_rc3_contracts import _intent
 
 
 def event(scope="named", **kwargs):
