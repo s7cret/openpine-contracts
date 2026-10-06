@@ -1,5 +1,7 @@
 # openpine-contracts
 
+The supported interpreter is ordinary CPython 3.13 (`>=3.13,<3.14`) with the GIL enabled. Free-threaded builds (`3.13t`), other Python minors, and other Python implementations are outside the supported runtime policy. This interpreter policy does not narrow functional requirements or acceptance gates.
+
 Canonical contract train for OpenPine 5.0.
 
 This package owns schemas, IDs, compatibility, and canonical hashing.
@@ -61,4 +63,4 @@ from openpine_contracts import (
 
 Draft 2020-12 validation is fail-closed and requires `jsonschema>=4.20,<5`
 (including its `referencing` dependency for packaged cross-schema references).
-Python `>=3.11`.
+Python `>=3.13,<3.14` (ordinary CPython with the GIL enabled).

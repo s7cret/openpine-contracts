@@ -7,7 +7,11 @@ name = "openpine-contracts"
 version = "5.0.0rc6"
 description = "Canonical OpenPine contracts: schemas, hashing, compatibility"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13,<3.14"
+classifiers = [
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
 license = "MIT"
 authors = [{name = "OpenPine"}]
 dependencies = ["jsonschema>=4.20,<5"]
@@ -37,13 +41,13 @@ pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = true
 packages = ["openpine_contracts"]
 ignore_missing_imports = true
