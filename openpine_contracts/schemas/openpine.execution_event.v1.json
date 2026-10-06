@@ -22,7 +22,7 @@
   "properties": {
     "sequence": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 1
     },
     "bar_index": {
       "type": "integer",
