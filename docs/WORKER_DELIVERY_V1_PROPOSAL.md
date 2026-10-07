@@ -1,15 +1,14 @@
-# Worker delivery v1 proposal
+# Worker delivery v1: agreed additive contract
 
-This draft adds `openpine.worker.delivery.v1`, version `1.0.0`, without changing
-the current catalog, registry, package root exports or `worker.protocol.v2`
-version `2.3.0`. Import `openpine_contracts.proposals.worker_delivery` explicitly
-to review the draft. Its JSON resource has a `.proposal.json` suffix and is not
-discoverable through `get_schema` or `list_schema_ids`.
-The resource lives in the separate `openpine_contracts.proposals` package with
-an explicit package-data entry; the current schema generator's resource closure
-remains intact.
+The registered `openpine.worker.delivery.v1`, version `1.0.0`, implements the
+agreed PR7 proposal without changing `worker.protocol.v2/2.3.0` logical bytes.
+Import `openpine_contracts.worker_delivery` for the bounded validator/framer.
+The historical proposal import delegates to this sole implementation; its JSON
+is retained as the reviewed generator definition. The additive official schema
+is discoverable through `get_schema` and `list_schema_ids` and packaged with the
+existing schema catalog. All previously registered schema bytes remain intact.
 
-The proposal is a bounded detached transcript validator and payload framer.
+The contract owner is a bounded detached transcript validator and payload framer.
 It performs no worker launch, transport I/O, owner activation or database write.
 It reuses canonical sealing and the existing v2 schema/semantic validator. It
 does not decode native/Pine state or establish that a receipt was durably stored.
@@ -31,7 +30,7 @@ physical recovery operations when the coordinated consumer design is adopted.
 
 Legacy fresh `closed_bar` traffic retains its current transport. Recovery mode
 must explicitly negotiate the new capability; an old worker must refuse a
-request requiring it. This draft does not alter that negotiation in consumers.
+request requiring it. Host adapters opt into the agreed recovery capabilities. Legacy workers continue to use their existing negotiation.
 
 ## Complete cuts, acknowledgments and repetition
 
@@ -70,15 +69,14 @@ canonical. Missing EOF, overlapping transfers, malformed/oversized frames,
 nonfinite values, duplicate JSON keys and exhausted budgets refuse. The producer
 emits bounded chunks; the detached validator holds bounded reconstructed bytes.
 Future streaming consumers should reuse the existing 2 MiB spool mechanism;
-there is no spool or external URI reader in this draft.
+the detached contract owner does not read external URIs.
 
-## Decision before consumers
+## Adoption and qualification boundary
 
-Agree the additive outer schema/version, capabilities, physical recovery versus
-logical control behavior, ACK owner boundary and these limits before registering
-the schema or connecting producer/consumer adapters. This follows specification
-section 11.1: common schema changes are coordinated before implementing consumers.
-Standing code/commit/draft PR authorization already covers this producer draft.
+The user agreed the additive schema/version, capabilities, physical recovery
+versus logical control behavior, ACK owner boundary and these limits before
+consumer implementation, as required by specification section 11.1. Host adapter
+integration is tracked separately from contract registration.
 
 Next consumers belong to OpenPine runtime/jobs, capability negotiation and trusted
 helper staging. Changes to frozen INT04 launch bindings and actual protected
