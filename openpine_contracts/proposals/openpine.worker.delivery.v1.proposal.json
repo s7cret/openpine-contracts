@@ -1,0 +1,540 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openpine.worker.delivery.v1",
+  "$comment": "PROPOSAL ONLY: separate package namespace; absent from official registry/catalog and root exports.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "producer",
+    "producer_version",
+    "producer_commit",
+    "stack_id",
+    "created_at_utc_ms",
+    "serializer_id",
+    "content_hash_alg",
+    "content_hash",
+    "schema_id",
+    "schema_version",
+    "job_id",
+    "run_id",
+    "session_id",
+    "worker_id",
+    "worker_generation",
+    "delivery_id",
+    "sender_role",
+    "kind",
+    "body"
+  ],
+  "properties": {
+    "producer": {
+      "const": "openpine"
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "producer_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "stack_id": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "created_at_utc_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serializer_id": {
+      "const": "openpine.canonical.json.v1"
+    },
+    "content_hash_alg": {
+      "const": "sha256"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "schema_id": {
+      "const": "openpine.worker.delivery.v1"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "worker_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "worker_generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "delivery_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "sender_role": {
+      "enum": [
+        "parent",
+        "worker"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "HELLO",
+        "MESSAGE",
+        "CHECKPOINT",
+        "RESTORE",
+        "ACK",
+        "PAYLOAD_BEGIN",
+        "PAYLOAD_CHUNK",
+        "PAYLOAD_END"
+      ]
+    },
+    "body": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "HELLO"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capabilities",
+              "inner_schema_hash",
+              "delivery_schema_hash",
+              "checkpoint_hash",
+              "limits"
+            ],
+            "properties": {
+              "capabilities": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "delivery_v1",
+                    "committed_job_v1"
+                  ]
+                }
+              },
+              "inner_schema_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "delivery_schema_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "checkpoint_hash": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "limits": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "raw_chunk_bytes",
+                  "frame_bytes",
+                  "payload_bytes",
+                  "transcript_bytes",
+                  "transcript_frames"
+                ],
+                "properties": {
+                  "raw_chunk_bytes": {
+                    "const": 131072
+                  },
+                  "frame_bytes": {
+                    "const": 262144
+                  },
+                  "payload_bytes": {
+                    "const": 16777216
+                  },
+                  "transcript_bytes": {
+                    "const": 33554432
+                  },
+                  "transcript_frames": {
+                    "const": 4096
+                  }
+                }
+              }
+            }
+          },
+          "sender_role": {
+            "const": "worker"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "MESSAGE"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "message"
+            ],
+            "properties": {
+              "message": {
+                "$ref": "openpine.worker.protocol.v2"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "CHECKPOINT"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "payload_id",
+              "checkpoint_hash",
+              "committed_sequence",
+              "callback_sequence",
+              "intent_sequence"
+            ],
+            "properties": {
+              "payload_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "checkpoint_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "committed_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "callback_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "intent_sequence": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "sender_role": {
+            "const": "parent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "RESTORE"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "payload_id",
+              "checkpoint_hash",
+              "committed_sequence",
+              "callback_sequence",
+              "intent_sequence"
+            ],
+            "properties": {
+              "payload_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "checkpoint_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "committed_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "callback_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "intent_sequence": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "sender_role": {
+            "const": "parent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "ACK"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "message_id",
+              "message_hash",
+              "sequence",
+              "checkpoint_hash",
+              "committed_sequence",
+              "callback_sequence",
+              "intent_sequence"
+            ],
+            "properties": {
+              "message_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "message_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "checkpoint_hash": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "committed_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "callback_sequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "intent_sequence": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "PAYLOAD_BEGIN"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "payload_id",
+              "codec",
+              "size_bytes",
+              "sha256"
+            ],
+            "properties": {
+              "payload_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "codec": {
+                "const": "openpine.committed-job.v1"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              }
+            }
+          },
+          "sender_role": {
+            "const": "parent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "PAYLOAD_CHUNK"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "payload_id",
+              "index",
+              "sha256",
+              "data"
+            ],
+            "properties": {
+              "payload_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 127
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^sha256:(?!0{64}$)[0-9a-f]{64}$"
+              },
+              "data": {
+                "type": "string",
+                "minLength": 4,
+                "maxLength": 174764,
+                "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+              }
+            }
+          },
+          "sender_role": {
+            "const": "parent"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "PAYLOAD_END"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "body": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "payload_id",
+              "chunks"
+            ],
+            "properties": {
+              "payload_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "chunks": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 128
+              }
+            }
+          },
+          "sender_role": {
+            "const": "parent"
+          }
+        }
+      }
+    }
+  ]
+}
