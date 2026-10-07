@@ -34,6 +34,7 @@ include = ["openpine_contracts*"]
 
 [tool.setuptools.package-data]
 openpine_contracts = ["py.typed", "schemas/*.json"]
+"openpine_contracts.proposals" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
