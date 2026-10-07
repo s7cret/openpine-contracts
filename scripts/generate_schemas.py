@@ -2443,6 +2443,17 @@ def main() -> None:
         ),
     )
 
+    # Agreed additive schema derives from the versioned proposal definition.
+    delivery = json.loads(
+        (
+            ROOT / "openpine_contracts" / "proposals" / "openpine.worker.delivery.v1.proposal.json"
+        ).read_text()
+    )
+    delivery["$comment"] = (
+        "Additive physical delivery contract; worker.protocol.v2 logical frames remain unchanged."
+    )
+    write("openpine.worker.delivery.v1.json", delivery)
+
 
 if __name__ == "__main__":
     main()

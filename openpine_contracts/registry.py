@@ -31,6 +31,7 @@ CATALOG: tuple[str, ...] = (
     "openpine.checkpoint.v1",
     "openpine.checkpoint.proof.v1",
     "openpine.worker.protocol.v2",
+    "openpine.worker.delivery.v1",
     "openpine.run.v2",
     "openpine.trial.identity.v1",
     "openpine.trial.v2",

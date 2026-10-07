@@ -147,11 +147,10 @@ def run(fixture, wires, cut=None):
     return validate_delivery_sequence(wires, binding, durable_cuts=(cut,), restored_cut=cut)
 
 
-def test_proposal_keeps_catalog_exports_and_v2_bytes_unchanged(fixture):
-    assert SCHEMA_ID not in contracts.list_schema_ids()
+def test_registered_additive_schema_keeps_v2_bytes_unchanged(fixture):
+    assert SCHEMA_ID in contracts.list_schema_ids()
     assert not hasattr(contracts, "validate_delivery_sequence")
-    with pytest.raises(contracts.SchemaNotFoundError):
-        contracts.get_schema(SCHEMA_ID)
+    assert contracts.get_schema(SCHEMA_ID)["properties"]["schema_version"] == {"const": "1.0.0"}
     assert contracts.get_schema("openpine.worker.protocol.v2")["properties"]["schema_version"] == {
         "const": "2.3.0"
     }
